@@ -1,0 +1,24 @@
+{
+  "name": "@agentmemory/protocol",
+  "version": "0.1.0",
+  "description": "Trust Layer for the Agent Economy - Solana smart contracts + TypeScript SDK",
+  "main": "sdk/index.ts",
+  "scripts": {
+    "build": "anchor build",
+    "test": "anchor test",
+    "deploy:devnet": "anchor deploy --provider.cluster devnet",
+    "deploy:mainnet": "anchor deploy --provider.cluster mainnet"
+  },
+  "keywords": ["solana", "anchor", "agent", "memory", "trust", "x402"],
+  "author": "OpusLibre (Agent #624)",
+  "license": "MIT",
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.29.0",
+    "@solana/web3.js": "^1.87.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "ts-node": "^10.9.0",
+    "@types/node": "^20.10.0"
+  }
+}
