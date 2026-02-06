@@ -39,7 +39,7 @@ jobs:
       - name: Setup Anchor
         run: |
           if ! command -v anchor &> /dev/null; then
-            cargo install --git https://github.com/coral-xyz/anchor --tag v0.29.0 anchor-cli --locked
+            cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked --force
           fi
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           anchor --version
