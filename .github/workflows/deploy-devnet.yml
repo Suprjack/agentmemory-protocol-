@@ -22,15 +22,6 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Cache Anchor
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/anchor
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-anchor-0.29.0
-
       - name: Setup Solana CLI
         run: |
           curl -L https://github.com/solana-labs/solana/releases/download/v1.18.0/solana-release-x86_64-unknown-linux-gnu.tar.bz2 -o solana.tar.bz2
@@ -41,15 +32,14 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           solana --version
       
-      - name: Setup Anchor
+      - name: Setup Anchor 0.29.0
         run: |
-          if ! command -v anchor &> /dev/null; then
-            cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked --force
-          fi
+          cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-          ANCHOR_VERSION=$(anchor --version | grep -oP 'anchor-cli \K[0-9.]+')
-          echo "Installed Anchor: $ANCHOR_VERSION"
-          sed -i "s/anchor-lang = \".*\"/anchor-lang = \"$ANCHOR_VERSION\"/" programs/agentmemory/Cargo.toml
+          export PATH="$HOME/.cargo/bin:$PATH"
+          echo 'y' | avm install 0.29.0
+          avm use 0.29.0
+          anchor --version
 
       - name: Configure Solana
         env:
