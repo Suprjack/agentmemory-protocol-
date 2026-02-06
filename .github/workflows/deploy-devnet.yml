@@ -1,0 +1,67 @@
+name: Deploy to Devnet
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'programs/**'
+      - 'Anchor.toml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      
+      - name: Setup Solana CLI
+        run: |
+          sh -c "$(curl -sSfL https://release.solana.com/v1.18.0/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+      
+      - name: Setup Anchor
+        run: |
+          cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
+          avm install 0.29.0
+          avm use 0.29.0
+      
+      - name: Configure Solana
+        run: |
+          solana config set --url devnet
+          solana-keygen new --no-bip39-passphrase --silent --outfile ~/.config/solana/id.json
+          solana airdrop 2 --url devnet || echo "Airdrop may fail, continuing..."
+      
+      - name: Build program
+        run: anchor build
+      
+      - name: Deploy to devnet
+        run: |
+          anchor deploy --provider.cluster devnet
+          echo "Program deployed!"
+      
+      - name: Save program ID
+        run: |
+          PROGRAM_ID=$(solana address -k target/deploy/agentmemory_protocol-keypair.json)
+          echo "PROGRAM_ID=$PROGRAM_ID" >> $GITHUB_ENV
+          echo "Program ID: $PROGRAM_ID"
+      
+      - name: Create deployment artifact
+        run: |
+          mkdir -p deployment
+          echo "Deployed to devnet at $(date)" > deployment/devnet-deployment.txt
+          echo "Program ID: $PROGRAM_ID" >> deployment/devnet-deployment.txt
+          solana program show $PROGRAM_ID >> deployment/devnet-deployment.txt
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: devnet-deployment
+          path: deployment/
