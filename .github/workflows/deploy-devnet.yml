@@ -30,6 +30,8 @@ jobs:
       - name: Setup Anchor
         run: |
           cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.cargo/bin:$PATH"
           yes | avm install 0.29.0 || echo "Anchor already installed"
           avm use 0.29.0
 
