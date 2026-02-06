@@ -1,232 +1,307 @@
-import { AnchorProvider, Program, BN } from '@coral-xyz/anchor';
-import { Connection, PublicKey, Keypair, SystemProgram } from '@solana/web3.js';
-import * as crypto from 'crypto';
+/**
+ * AgentMemory Protocol SDK
+ * 
+ * TypeScript client for interacting with the AgentMemory Solana smart contract.
+ * Enables AI agents to buy, sell, and manage memory modules on-chain.
+ */
 
-export class TrustLayer {
-  program: Program;
-  provider: AnchorProvider;
-  wallet: Keypair;
+import * as anchor from "@coral-xyz/anchor";
+import { Program, AnchorProvider, Wallet } from "@coral-xyz/anchor";
+import { Connection, PublicKey, Keypair, SystemProgram } from "@solana/web3.js";
+import { AgentMemory } from "../target/types/agent_memory";
+import idl from "../target/idl/agent_memory.json";
 
-  constructor(program: Program, provider: AnchorProvider, wallet: Keypair) {
-    this.program = program;
-    this.provider = provider;
-    this.wallet = wallet;
-  }
+export enum ModuleCategory {
+  BiTemporal = "BiTemporal",
+  Procedural = "Procedural",
+  Semantic = "Semantic",
+  Episodic = "Episodic",
+  Custom = "Custom",
+}
 
-  /**
-   * Initialize TrustLayer SDK
-   * @param connection Solana connection
-   * @param wallet Keypair for signing transactions
-   * @param programId Program ID (optional, defaults to mainnet)
-   */
-  static async init(
+export interface MemoryModule {
+  moduleId: string;
+  creator: PublicKey;
+  name: string;
+  description: string;
+  price: number; // in lamports
+  ipfsHash: string;
+  category: ModuleCategory;
+  createdAt: number;
+  totalPurchases: number;
+  totalRevenue: number;
+}
+
+export interface UserPurchase {
+  user: PublicKey;
+  moduleId: string;
+  purchasedAt: number;
+}
+
+export class AgentMemoryClient {
+  private program: Program<AgentMemory>;
+  private provider: AnchorProvider;
+
+  constructor(
     connection: Connection,
-    wallet: Keypair,
+    wallet: Wallet,
     programId?: PublicKey
-  ): Promise<TrustLayer> {
-    const provider = new AnchorProvider(
-      connection,
-      { publicKey: wallet.publicKey } as any,
-      { commitment: 'confirmed' }
-    );
-
-    // Load program (would normally load from IDL)
-    const program = {} as Program; // Placeholder - needs actual IDL
-    
-    return new TrustLayer(program, provider, wallet);
+  ) {
+    this.provider = new AnchorProvider(connection, wallet, {});
+    const pid = programId || new PublicKey(idl.metadata.address);
+    this.program = new Program(idl as any, pid, this.provider);
   }
 
   /**
-   * Initialize an agent account
-   * @param agentId Unique identifier for the agent (max 64 chars)
-   * @returns Transaction signature
+   * Initialize the platform (admin only, run once)
    */
-  async initializeAgent(agentId: string): Promise<string> {
-    if (agentId.length > 64) {
-      throw new Error('Agent ID must be 64 characters or less');
-    }
-
-    const [agentPda] = await this.getAgentPda(agentId);
-
-    const tx = await this.program.methods
-      .initializeAgent(agentId)
-      .accounts({
-        agent: agentPda,
-        authority: this.wallet.publicKey,
-        systemProgram: SystemProgram.programId,
-      })
-      .signers([this.wallet])
-      .rpc();
-
-    return tx;
-  }
-
-  /**
-   * Log a decision with input and logic
-   * @param agentId Agent identifier
-   * @param decision Decision object with input and logic
-   * @returns Transaction signature and merkle root
-   */
-  async logDecision(
-    agentId: string,
-    decision: { input: string; logic: string }
-  ): Promise<{ txSig: string; merkleRoot: string }> {
-    if (decision.input.length > 256) {
-      throw new Error('Input must be 256 characters or less');
-    }
-    if (decision.logic.length > 256) {
-      throw new Error('Logic must be 256 characters or less');
-    }
-
-    const [agentPda] = await this.getAgentPda(agentId);
-    const timestamp = Math.floor(Date.now() / 1000);
-    const [memoryPda] = await this.getMemoryPda(agentPda, timestamp);
-
-    // Compute merkle root locally for return value
-    const inputHash = crypto.createHash('sha256').update(decision.input).digest();
-    const logicHash = crypto.createHash('sha256').update(decision.logic).digest();
-    const combined = Buffer.concat([inputHash, logicHash]);
-    const merkleRoot = crypto.createHash('sha256').update(combined).digest('hex');
-
-    const tx = await this.program.methods
-      .logDecision(decision.input, decision.logic)
-      .accounts({
-        agent: agentPda,
-        memoryLog: memoryPda,
-        authority: this.wallet.publicKey,
-        systemProgram: SystemProgram.programId,
-      })
-      .signers([this.wallet])
-      .rpc();
-
-    return { txSig: tx, merkleRoot };
-  }
-
-  /**
-   * Attest to the outcome of a decision
-   * @param agentId Agent identifier
-   * @param memoryLog Memory log public key
-   * @param outcome Outcome object
-   * @returns Transaction signature
-   */
-  async attestOutcome(
-    agentId: string,
-    memoryLog: PublicKey,
-    outcome: { data: string; success: boolean; scoreDelta: number }
+  async initialize(
+    platformFeePct: number = 5,
+    royaltyPct: number = 10,
+    feeCollector: PublicKey
   ): Promise<string> {
-    if (outcome.data.length > 256) {
-      throw new Error('Outcome must be 256 characters or less');
-    }
-
-    const [agentPda] = await this.getAgentPda(agentId);
-    const [attestationPda] = await this.getAttestationPda(memoryLog);
+    const [configPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("config")],
+      this.program.programId
+    );
 
     const tx = await this.program.methods
-      .attestOutcome(outcome.data, outcome.success, new BN(outcome.scoreDelta))
+      .initialize(platformFeePct, royaltyPct)
       .accounts({
-        agent: agentPda,
-        memoryLog,
-        attestation: attestationPda,
-        authority: this.wallet.publicKey,
+        platformConfig: configPda,
+        authority: this.provider.wallet.publicKey,
+        feeCollector,
         systemProgram: SystemProgram.programId,
       })
-      .signers([this.wallet])
       .rpc();
 
     return tx;
   }
 
   /**
-   * Get agent account PDA
+   * Register a new memory module
    */
-  async getAgentPda(agentId: string): Promise<[PublicKey, number]> {
-    return await PublicKey.findProgramAddress(
-      [Buffer.from('agent'), Buffer.from(agentId)],
-      this.program.programId
-    );
+  async registerModule(
+    moduleId: string,
+    name: string,
+    description: string,
+    priceSOL: number,
+    ipfsHash: string,
+    category: ModuleCategory
+  ): Promise<string> {
+    const [modulePda] = this.getModulePDA(moduleId);
+    const price = priceSOL * anchor.web3.LAMPORTS_PER_SOL;
+
+    const categoryEnum = this.categoryToEnum(category);
+
+    const tx = await this.program.methods
+      .registerModule(
+        moduleId,
+        name,
+        description,
+        new anchor.BN(price),
+        ipfsHash,
+        categoryEnum
+      )
+      .accounts({
+        module: modulePda,
+        creator: this.provider.wallet.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    return tx;
   }
 
   /**
-   * Get memory log PDA
+   * Purchase a memory module
    */
-  async getMemoryPda(agentPubkey: PublicKey, timestamp: number): Promise<[PublicKey, number]> {
-    const timestampBuffer = Buffer.alloc(8);
-    timestampBuffer.writeBigInt64LE(BigInt(timestamp));
+  async purchaseModule(moduleId: string): Promise<string> {
+    const [modulePda] = this.getModulePDA(moduleId);
+    const [purchasePda] = this.getPurchasePDA(
+      this.provider.wallet.publicKey,
+      moduleId
+    );
+    const [configPda] = this.getConfigPDA();
+
+    // Fetch module to get creator address
+    const module = await this.getModule(moduleId);
+    const feeCollector = await this.getFeeCollector();
+
+    const tx = await this.program.methods
+      .purchaseModule()
+      .accounts({
+        module: modulePda,
+        purchase: purchasePda,
+        platformConfig: configPda,
+        buyer: this.provider.wallet.publicKey,
+        creator: module.creator,
+        feeCollector,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    return tx;
+  }
+
+  /**
+   * Get module details
+   */
+  async getModule(moduleId: string): Promise<MemoryModule> {
+    const [modulePda] = this.getModulePDA(moduleId);
+    const account = await this.program.account.memoryModule.fetch(modulePda);
+
+    return {
+      moduleId: account.moduleId,
+      creator: account.creator,
+      name: account.name,
+      description: account.description,
+      price: account.price.toNumber(),
+      ipfsHash: account.ipfsHash,
+      category: this.enumToCategory(account.category),
+      createdAt: account.createdAt.toNumber(),
+      totalPurchases: account.totalPurchases.toNumber(),
+      totalRevenue: account.totalRevenue.toNumber(),
+    };
+  }
+
+  /**
+   * Check if user owns a module
+   */
+  async hasPurchased(
+    user: PublicKey,
+    moduleId: string
+  ): Promise<boolean> {
+    try {
+      const [purchasePda] = this.getPurchasePDA(user, moduleId);
+      await this.program.account.userPurchase.fetch(purchasePda);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get user's purchase record
+   */
+  async getPurchase(
+    user: PublicKey,
+    moduleId: string
+  ): Promise<UserPurchase | null> {
+    try {
+      const [purchasePda] = this.getPurchasePDA(user, moduleId);
+      const account = await this.program.account.userPurchase.fetch(purchasePda);
+
+      return {
+        user: account.user,
+        moduleId: account.moduleId,
+        purchasedAt: account.purchasedAt.toNumber(),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Download module content from IPFS
+   */
+  async downloadModule(moduleId: string): Promise<string> {
+    const module = await this.getModule(moduleId);
+    const hasPurchased = await this.hasPurchased(
+      this.provider.wallet.publicKey,
+      moduleId
+    );
+
+    if (!hasPurchased) {
+      throw new Error("You must purchase this module first");
+    }
+
+    // Fetch from IPFS gateway
+    const ipfsUrl = `https://ipfs.io/ipfs/${module.ipfsHash}`;
+    const response = await fetch(ipfsUrl);
     
-    return await PublicKey.findProgramAddress(
-      [Buffer.from('memory'), agentPubkey.toBuffer(), timestampBuffer],
+    if (!response.ok) {
+      throw new Error(`Failed to download from IPFS: ${response.statusText}`);
+    }
+
+    return await response.text();
+  }
+
+  // Helper methods
+
+  private getModulePDA(moduleId: string): [PublicKey, number] {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("module"), Buffer.from(moduleId)],
       this.program.programId
     );
   }
 
-  /**
-   * Get attestation PDA
-   */
-  async getAttestationPda(memoryLog: PublicKey): Promise<[PublicKey, number]> {
-    return await PublicKey.findProgramAddress(
-      [Buffer.from('attest'), memoryLog.toBuffer()],
+  private getPurchasePDA(
+    user: PublicKey,
+    moduleId: string
+  ): [PublicKey, number] {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("purchase"), user.toBuffer(), Buffer.from(moduleId)],
       this.program.programId
     );
   }
 
-  /**
-   * Get agent account data
-   */
-  async getAgent(agentId: string) {
-    const [agentPda] = await this.getAgentPda(agentId);
-    return await this.program.account.agentAccount.fetch(agentPda);
+  private getConfigPDA(): [PublicKey, number] {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("config")],
+      this.program.programId
+    );
   }
 
-  /**
-   * Get memory log data
-   */
-  async getMemoryLog(memoryLogPubkey: PublicKey) {
-    return await this.program.account.memoryLog.fetch(memoryLogPubkey);
+  private async getFeeCollector(): Promise<PublicKey> {
+    const [configPda] = this.getConfigPDA();
+    const config = await this.program.account.platformConfig.fetch(configPda);
+    return config.feeCollector;
   }
 
-  /**
-   * Get attestation data
-   */
-  async getAttestation(attestationPubkey: PublicKey) {
-    return await this.program.account.attestation.fetch(attestationPubkey);
+  private categoryToEnum(category: ModuleCategory): any {
+    const map = {
+      [ModuleCategory.BiTemporal]: { biTemporal: {} },
+      [ModuleCategory.Procedural]: { procedural: {} },
+      [ModuleCategory.Semantic]: { semantic: {} },
+      [ModuleCategory.Episodic]: { episodic: {} },
+      [ModuleCategory.Custom]: { custom: {} },
+    };
+    return map[category];
+  }
+
+  private enumToCategory(enumVal: any): ModuleCategory {
+    if (enumVal.biTemporal !== undefined) return ModuleCategory.BiTemporal;
+    if (enumVal.procedural !== undefined) return ModuleCategory.Procedural;
+    if (enumVal.semantic !== undefined) return ModuleCategory.Semantic;
+    if (enumVal.episodic !== undefined) return ModuleCategory.Episodic;
+    return ModuleCategory.Custom;
   }
 }
 
-// Export types
-export interface Decision {
-  input: string;
-  logic: string;
-}
-
-export interface Outcome {
-  data: string;
-  success: boolean;
-  scoreDelta: number;
-}
-
-// Simple usage example
+// Example usage
 export async function example() {
-  const connection = new Connection('https://api.devnet.solana.com');
-  const wallet = Keypair.generate();
+  const connection = new Connection("https://api.devnet.solana.com");
+  const wallet = new Wallet(Keypair.generate()); // Use real wallet in production
   
-  const trustLayer = await TrustLayer.init(connection, wallet);
-  
-  // Initialize agent
-  await trustLayer.initializeAgent('my-trading-bot');
-  
-  // Log a decision
-  const { txSig, merkleRoot } = await trustLayer.logDecision('my-trading-bot', {
-    input: 'SOL price dropped 15%',
-    logic: 'Buy 10 SOL - oversold RSI'
-  });
-  
-  console.log('Decision logged:', txSig);
-  console.log('Merkle root:', merkleRoot);
-  
-  // Later: attest to outcome
-  // await trustLayer.attestOutcome(agentId, memoryLogPubkey, {
-  //   data: 'Profit: +8% (0.8 SOL)',
-  //   success: true,
-  //   scoreDelta: 10
-  // });
+  const client = new AgentMemoryClient(connection, wallet);
+
+  // Register a module
+  const tx1 = await client.registerModule(
+    "bitemporal-v1",
+    "Bi-Temporal Memory System",
+    "Working memory + permanent archive with Ebbinghaus decay",
+    0.1, // 0.1 SOL
+    "QmXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    ModuleCategory.BiTemporal
+  );
+  console.log("Module registered:", tx1);
+
+  // Purchase a module
+  const tx2 = await client.purchaseModule("bitemporal-v1");
+  console.log("Module purchased:", tx2);
+
+  // Download module content
+  const content = await client.downloadModule("bitemporal-v1");
+  console.log("Module content:", content);
 }

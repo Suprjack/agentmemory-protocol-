@@ -1,55 +1,46 @@
-# Dependencies
-node_modules/
-.yarn/
-.pnp.*
-
-# Build outputs
+# Anchor
+.anchor
 target/
-dist/
-build/
-.anchor/
+**/*.rs.bk
+test-ledger/
 
-# Keypairs & secrets (CRITICAL!)
+# Node
+node_modules/
+dist/
+*.log
+.DS_Store
+
+# IDL
+target/idl/
+target/types/
+
+# Keys (CRITICAL - never commit private keys)
 *.json
 !package.json
-!package-lock.json
 !tsconfig.json
-*.key
-*.pem
+id.json
+keypair.json
+*-keypair.json
+
+# Environment
 .env
-.env.*
+.env.local
+.env.production
+
+# Build artifacts
+*.so
+*.wasm
+
+# Test artifacts
+.nyc_output/
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Testing
-.nyc_output/
-coverage/
-*.lcov
-
-# Temporary
-tmp/
-temp/
-*.tmp
-
-# Solana
-test-ledger/
-.solana/
-
-# Backup files
-*.bak
-*.backup

@@ -1,17 +1,12 @@
-[toolchain]
-
 [features]
 seeds = false
 skip-lint = false
 
-[programs.localnet]
-agentmemory = "AMem1111111111111111111111111111111111111111"
-
 [programs.devnet]
-agentmemory = "AMem1111111111111111111111111111111111111111"
+agent_memory = "AgMemXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
-[programs.mainnet]
-agentmemory = "AMem1111111111111111111111111111111111111111"
+[programs.localnet]
+agent_memory = "AgMemXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 [registry]
 url = "https://api.apr.dev"
