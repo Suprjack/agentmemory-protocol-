@@ -1,332 +1,298 @@
 /**
  * Solder-Cortex Integration Example
  * 
- * Demonstrates AgentMemory Protocol integration with Solder-Cortex
- * for wallet intelligence and conviction tracking.
+ * This example demonstrates how to use AgentMemory Protocol
+ * to track wallet conviction metrics from Solder-Cortex wallet intelligence.
  * 
- * Use Case: AI trading agent tracks wallet analysis decisions and outcomes
- * to build reputation for wallet intelligence accuracy.
+ * Solder-Cortex analyzes on-chain behavior to determine wallet "conviction"
+ * (commitment to holding vs. paper hands). AgentMemory stores these insights
+ * as verifiable reputation data.
  * 
- * Partnership: Solder-Cortex (wallet conviction intelligence)
- * Integration: Decision logging + outcome attestation for wallet signals
+ * Use Case: AI agents can query wallet conviction before:
+ * - Following wallet trades
+ * - Lending to wallet
+ * - Partnering with wallet owner
+ * 
+ * Partnership: Solder-Cortex + AgentMemory Protocol
  */
 
-import { Connection, PublicKey, Keypair } from '@solana/web3.js';
-import { TrustLayer } from '../sdk';
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  Transaction,
+  SystemProgram,
+  LAMPORTS_PER_SOL,
+} from '@solana/web3.js';
+import { Program, AnchorProvider, Wallet } from '@coral-xyz/anchor';
+import { AgentMemoryProtocol } from '../sdk';
 
-// Solder-Cortex Mock Types (replace with actual SDK)
+// Solder-Cortex API Types (mock for example)
 interface WalletConviction {
   walletAddress: string;
-  convictionScore: number; // 0-100
-  signalType: 'accumulation' | 'distribution' | 'whale_move' | 'smart_money';
-  confidence: number; // 0-1
-  timestamp: number;
-  reasoning: string[];
+  convictionScore: number; // 0-100 (100 = diamond hands)
+  avgHoldTime: number; // days
+  winRate: number; // % profitable trades
+  totalTrades: number;
+  riskProfile: 'conservative' | 'moderate' | 'aggressive';
+  lastUpdated: Date;
 }
 
-interface WalletOutcome {
-  walletAddress: string;
-  actualMove: 'buy' | 'sell' | 'hold';
-  priceChange24h: number;
-  priceChange7d: number;
-  volumeChange: number;
-  wasCorrect: boolean;
-  timestamp: number;
+interface SolderCortexAPI {
+  getWalletConviction(walletAddress: string): Promise<WalletConviction>;
+  subscribeToUpdates(walletAddress: string, callback: (data: WalletConviction) => void): void;
 }
 
 /**
- * SolderCortexAgent - AI agent that analyzes wallet behavior
- * and logs conviction decisions with AgentMemory
+ * Mock Solder-Cortex API (replace with real SDK)
  */
-class SolderCortexAgent {
-  private trustLayer: TrustLayer;
-  private agentKeypair: Keypair;
-  private connection: Connection;
+class MockSolderCortex implements SolderCortexAPI {
+  async getWalletConviction(walletAddress: string): Promise<WalletConviction> {
+    // In production, this would call Solder-Cortex API
+    return {
+      walletAddress,
+      convictionScore: 85, // High conviction wallet
+      avgHoldTime: 45, // 45 days average hold
+      winRate: 72, // 72% profitable trades
+      totalTrades: 150,
+      riskProfile: 'moderate',
+      lastUpdated: new Date(),
+    };
+  }
+
+  subscribeToUpdates(walletAddress: string, callback: (data: WalletConviction) => void): void {
+    // Mock real-time updates
+    setInterval(async () => {
+      const data = await this.getWalletConviction(walletAddress);
+      callback(data);
+    }, 60000); // Update every minute
+  }
+}
+
+/**
+ * Wallet Conviction Memory Module
+ * Stores Solder-Cortex conviction data on-chain via AgentMemory Protocol
+ */
+class WalletConvictionModule {
+  private memory: AgentMemoryProtocol;
+  private cortex: SolderCortexAPI;
+  private moduleId: string;
 
   constructor(
     connection: Connection,
-    agentKeypair: Keypair,
+    wallet: Wallet,
     programId: PublicKey
   ) {
-    this.connection = connection;
-    this.agentKeypair = agentKeypair;
-    this.trustLayer = new TrustLayer(connection, agentKeypair, programId);
+    const provider = new AnchorProvider(connection, wallet, {});
+    this.memory = new AgentMemoryProtocol(provider, programId);
+    this.cortex = new MockSolderCortex();
+    this.moduleId = 'wallet-conviction-v1';
   }
 
   /**
-   * Initialize agent's trust layer account
+   * Register the Wallet Conviction module in AgentMemory marketplace
    */
-  async initialize() {
-    const tx = await this.trustLayer.initializeAgent();
-    console.log('✅ Agent initialized:', tx);
-  }
-
-  /**
-   * Analyze wallet and log conviction decision
-   */
-  async analyzeWallet(walletAddress: string): Promise<WalletConviction> {
-    console.log(`🔍 Analyzing wallet: ${walletAddress}`);
-
-    // Mock Solder-Cortex analysis (replace with actual API call)
-    const conviction = await this.mockSolderCortexAnalysis(walletAddress);
-
-    // Log decision to AgentMemory
-    const decision = {
-      type: 'wallet_conviction',
-      wallet: walletAddress,
-      signal: conviction.signalType,
-      conviction_score: conviction.convictionScore,
-      confidence: conviction.confidence,
-      reasoning: conviction.reasoning.join(', '),
-      timestamp: conviction.timestamp,
-      prediction: this.convictionToAction(conviction)
+  async registerModule(): Promise<void> {
+    const metadata = {
+      name: 'Wallet Conviction Tracker',
+      description: 'Track wallet conviction metrics from Solder-Cortex. Analyze on-chain behavior to determine diamond hands vs. paper hands.',
+      version: '1.0.0',
+      author: 'OpusLibre + Solder-Cortex',
+      category: 'reputation',
+      tags: ['trading', 'conviction', 'wallet-intelligence', 'solder-cortex'],
+      price: 0.15, // 0.15 SOL (~$30)
+      documentation: 'https://docs.agentmemory.xyz/modules/wallet-conviction',
+      features: [
+        'Real-time conviction scoring',
+        'Historical hold time tracking',
+        'Win rate analysis',
+        'Risk profile assessment',
+        'Automated reputation updates',
+      ],
     };
 
-    const decisionHash = this.hashDecision(decision);
-    const tx = await this.trustLayer.logDecision(decisionHash, decision);
-    
-    console.log('📝 Conviction logged on-chain:', {
-      wallet: walletAddress,
-      signal: conviction.signalType,
-      score: conviction.convictionScore,
-      tx
-    });
-
-    return conviction;
-  }
-
-  /**
-   * Attest outcome of wallet prediction
-   */
-  async attestOutcome(
-    conviction: WalletConviction,
-    outcome: WalletOutcome
-  ): Promise<string> {
-    console.log(`✅ Attesting outcome for wallet: ${outcome.walletAddress}`);
-
-    // Calculate accuracy
-    const accuracy = this.calculateAccuracy(conviction, outcome);
-
-    // Create attestation data
-    const attestation = {
-      wallet: outcome.walletAddress,
-      predicted_signal: conviction.signalType,
-      actual_move: outcome.actualMove,
-      conviction_score: conviction.convictionScore,
-      was_correct: outcome.wasCorrect,
-      accuracy,
-      price_change_24h: outcome.priceChange24h,
-      price_change_7d: outcome.priceChange7d,
-      volume_change: outcome.volumeChange,
-      timestamp: outcome.timestamp
-    };
-
-    const decisionHash = this.hashDecision({
-      type: 'wallet_conviction',
-      wallet: conviction.walletAddress,
-      signal: conviction.signalType,
-      conviction_score: conviction.convictionScore,
-      confidence: conviction.confidence,
-      reasoning: conviction.reasoning.join(', '),
-      timestamp: conviction.timestamp,
-      prediction: this.convictionToAction(conviction)
-    });
-
-    const attestationHash = this.hashDecision(attestation);
-    const tx = await this.trustLayer.attestOutcome(
-      decisionHash,
-      attestationHash,
-      attestation
+    await this.memory.registerModule(
+      this.moduleId,
+      metadata,
+      'ipfs://QmWalletConviction...' // IPFS hash of module code
     );
 
-    console.log('🎯 Outcome attested:', {
-      accuracy: `${(accuracy * 100).toFixed(1)}%`,
-      was_correct: outcome.wasCorrect,
-      tx
+    console.log('✅ Wallet Conviction module registered');
+  }
+
+  /**
+   * Track conviction for a specific wallet
+   */
+  async trackWallet(targetWallet: string): Promise<void> {
+    console.log(`📊 Fetching conviction data for ${targetWallet}...`);
+    
+    const conviction = await this.cortex.getWalletConviction(targetWallet);
+    
+    console.log('Conviction Analysis:', {
+      score: conviction.convictionScore,
+      avgHold: `${conviction.avgHoldTime} days`,
+      winRate: `${conviction.winRate}%`,
+      profile: conviction.riskProfile,
     });
 
-    return tx;
+    // Store conviction data in AgentMemory
+    const memoryEntry = {
+      type: 'wallet_conviction',
+      wallet: targetWallet,
+      conviction_score: conviction.convictionScore,
+      avg_hold_time_days: conviction.avgHoldTime,
+      win_rate_pct: conviction.winRate,
+      total_trades: conviction.totalTrades,
+      risk_profile: conviction.riskProfile,
+      timestamp: conviction.lastUpdated.toISOString(),
+      source: 'solder-cortex',
+    };
+
+    await this.memory.logDecision(
+      targetWallet,
+      'conviction_analysis',
+      memoryEntry,
+      { verified: true }
+    );
+
+    console.log('✅ Conviction data logged on-chain');
   }
 
   /**
-   * Get agent's wallet intelligence reputation
+   * Monitor wallet and update conviction automatically
    */
-  async getReputation(): Promise<{
-    totalPredictions: number;
-    correctPredictions: number;
-    accuracy: number;
-    averageConviction: number;
-    signalBreakdown: Record<string, { total: number; correct: number; accuracy: number }>;
+  async monitorWallet(targetWallet: string): Promise<void> {
+    console.log(`🔄 Monitoring ${targetWallet} for conviction updates...`);
+
+    this.cortex.subscribeToUpdates(targetWallet, async (data) => {
+      console.log(`📈 Conviction updated: ${data.convictionScore}`);
+
+      const memoryEntry = {
+        type: 'wallet_conviction_update',
+        wallet: targetWallet,
+        conviction_score: data.convictionScore,
+        avg_hold_time_days: data.avgHoldTime,
+        win_rate_pct: data.winRate,
+        total_trades: data.totalTrades,
+        risk_profile: data.riskProfile,
+        timestamp: data.lastUpdated.toISOString(),
+        source: 'solder-cortex',
+      };
+
+      await this.memory.logDecision(
+        targetWallet,
+        'conviction_update',
+        memoryEntry,
+        { verified: true, auto_updated: true }
+      );
+
+      console.log('✅ Conviction update logged on-chain');
+    });
+  }
+
+  /**
+   * Query historical conviction data
+   */
+  async getConvictionHistory(targetWallet: string): Promise<any[]> {
+    const history = await this.memory.getAgentHistory(targetWallet);
+    
+    return history
+      .filter(entry => 
+        entry.decision_type === 'conviction_analysis' ||
+        entry.decision_type === 'conviction_update'
+      )
+      .map(entry => ({
+        timestamp: new Date(entry.timestamp * 1000),
+        score: entry.context.conviction_score,
+        avgHold: entry.context.avg_hold_time_days,
+        winRate: entry.context.win_rate_pct,
+        profile: entry.context.risk_profile,
+      }));
+  }
+
+  /**
+   * AI Agent Decision: Should I follow this wallet's trades?
+   */
+  async shouldFollowWallet(targetWallet: string): Promise<{
+    recommendation: 'follow' | 'monitor' | 'avoid';
+    confidence: number;
+    reasoning: string;
   }> {
-    const account = await this.trustLayer.getAgentAccount();
+    const conviction = await this.cortex.getWalletConviction(targetWallet);
     
-    // Parse decisions to calculate reputation
-    const decisions = account.decisions; // Simplified - would parse from merkle tree
-    
-    let totalPredictions = 0;
-    let correctPredictions = 0;
-    let totalConviction = 0;
-    const signalBreakdown: Record<string, { total: number; correct: number; accuracy: number }> = {};
-
-    // Mock calculation (in production, would iterate through actual decisions)
-    // This demonstrates the data structure
-    
-    return {
-      totalPredictions,
-      correctPredictions,
-      accuracy: totalPredictions > 0 ? correctPredictions / totalPredictions : 0,
-      averageConviction: totalPredictions > 0 ? totalConviction / totalPredictions : 0,
-      signalBreakdown
-    };
-  }
-
-  /**
-   * Convert conviction to actionable prediction
-   */
-  private convictionToAction(conviction: WalletConviction): 'buy' | 'sell' | 'hold' {
-    if (conviction.signalType === 'accumulation' || conviction.signalType === 'smart_money') {
-      return conviction.convictionScore > 70 ? 'buy' : 'hold';
-    } else if (conviction.signalType === 'distribution') {
-      return conviction.convictionScore > 70 ? 'sell' : 'hold';
+    // Decision logic
+    if (conviction.convictionScore >= 80 && conviction.winRate >= 70) {
+      return {
+        recommendation: 'follow',
+        confidence: 0.9,
+        reasoning: `High conviction (${conviction.convictionScore}) + strong win rate (${conviction.winRate}%). Diamond hands with proven track record.`,
+      };
+    } else if (conviction.convictionScore >= 60 && conviction.winRate >= 50) {
+      return {
+        recommendation: 'monitor',
+        confidence: 0.6,
+        reasoning: `Moderate conviction (${conviction.convictionScore}) and win rate (${conviction.winRate}%). Worth monitoring but not blindly following.`,
+      };
+    } else {
+      return {
+        recommendation: 'avoid',
+        confidence: 0.8,
+        reasoning: `Low conviction (${conviction.convictionScore}) or poor win rate (${conviction.winRate}%). Paper hands or inexperienced trader.`,
+      };
     }
-    return 'hold';
-  }
-
-  /**
-   * Calculate accuracy of conviction vs outcome
-   */
-  private calculateAccuracy(
-    conviction: WalletConviction,
-    outcome: WalletOutcome
-  ): number {
-    const predicted = this.convictionToAction(conviction);
-    
-    // Base accuracy on action match
-    let accuracy = predicted === outcome.actualMove ? 1.0 : 0.0;
-    
-    // Adjust based on conviction score alignment with outcome strength
-    if (outcome.wasCorrect) {
-      const outcomeStrength = Math.abs(outcome.priceChange7d) / 100;
-      const convictionStrength = conviction.convictionScore / 100;
-      const alignment = 1 - Math.abs(outcomeStrength - convictionStrength);
-      accuracy = (accuracy + alignment) / 2;
-    }
-    
-    return Math.max(0, Math.min(1, accuracy));
-  }
-
-  /**
-   * Mock Solder-Cortex API call
-   * (Replace with actual Solder-Cortex SDK integration)
-   */
-  private async mockSolderCortexAnalysis(
-    walletAddress: string
-  ): Promise<WalletConviction> {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    // Mock conviction data
-    const signals: WalletConviction['signalType'][] = [
-      'accumulation', 'distribution', 'whale_move', 'smart_money'
-    ];
-    
-    return {
-      walletAddress,
-      convictionScore: Math.floor(Math.random() * 40) + 60, // 60-100
-      signalType: signals[Math.floor(Math.random() * signals.length)],
-      confidence: 0.7 + Math.random() * 0.3, // 0.7-1.0
-      timestamp: Date.now(),
-      reasoning: [
-        'Large accumulation pattern detected',
-        'Wallet shows smart money characteristics',
-        'Historical accuracy: 78%',
-        'Correlation with previous whale moves'
-      ]
-    };
-  }
-
-  /**
-   * Simple hash function for decisions
-   * (In production, use proper cryptographic hash)
-   */
-  private hashDecision(decision: any): string {
-    return Buffer.from(JSON.stringify(decision)).toString('base64').slice(0, 32);
   }
 }
 
 /**
- * Example Usage: Wallet Intelligence Trading Agent
+ * Example Usage
  */
 async function main() {
-  console.log('🚀 Solder-Cortex × AgentMemory Integration\n');
+  console.log('🚀 Solder-Cortex + AgentMemory Integration Example\n');
 
   // Setup
   const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-  const agentKeypair = Keypair.generate();
-  const programId = new PublicKey('YourProgramIdHere');
+  const wallet = new Wallet(Keypair.generate());
+  const programId = new PublicKey('YOUR_PROGRAM_ID'); // Replace with deployed program ID
 
-  // Initialize agent
-  const agent = new SolderCortexAgent(connection, agentKeypair, programId);
-  await agent.initialize();
+  // Airdrop for testing
+  const airdropSig = await connection.requestAirdrop(
+    wallet.publicKey,
+    2 * LAMPORTS_PER_SOL
+  );
+  await connection.confirmTransaction(airdropSig);
 
-  console.log('✅ SolderCortex Agent initialized\n');
+  // Initialize module
+  const convictionModule = new WalletConvictionModule(connection, wallet, programId);
 
-  // Scenario: Analyze multiple wallets and track outcomes
-  const walletsToAnalyze = [
-    'Whale1...abc',
-    'SmartMoney1...def',
-    'Accumulator1...ghi'
-  ];
+  // Step 1: Register module in marketplace
+  console.log('Step 1: Registering Wallet Conviction module...');
+  await convictionModule.registerModule();
+  console.log('');
 
-  const convictions: WalletConviction[] = [];
+  // Step 2: Track a wallet
+  const targetWallet = 'ExampleWallet1234567890abcdefghijklmnopqrs';
+  console.log(`Step 2: Tracking wallet ${targetWallet}...`);
+  await convictionModule.trackWallet(targetWallet);
+  console.log('');
 
-  // Step 1: Analyze wallets and log convictions
-  console.log('📊 PHASE 1: Wallet Analysis & Conviction Logging\n');
-  for (const wallet of walletsToAnalyze) {
-    const conviction = await agent.analyzeWallet(wallet);
-    convictions.push(conviction);
-    console.log('');
-  }
+  // Step 3: Make trading decision
+  console.log('Step 3: Should I follow this wallet?');
+  const decision = await convictionModule.shouldFollowWallet(targetWallet);
+  console.log('Decision:', decision);
+  console.log('');
 
-  // Step 2: Wait for outcomes (simulated)
-  console.log('⏳ Waiting for market outcomes (simulated)...\n');
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  // Step 4: Start monitoring (real-time updates)
+  console.log('Step 4: Starting real-time monitoring...');
+  await convictionModule.monitorWallet(targetWallet);
+  console.log('Monitoring active. Press Ctrl+C to stop.');
 
-  // Step 3: Attest outcomes
-  console.log('✅ PHASE 2: Outcome Attestation\n');
-  for (const conviction of convictions) {
-    // Mock outcome (in production, would fetch real market data)
-    const outcome: WalletOutcome = {
-      walletAddress: conviction.walletAddress,
-      actualMove: conviction.convictionScore > 80 ? 
-        (conviction.signalType === 'accumulation' ? 'buy' : 'sell') : 'hold',
-      priceChange24h: (Math.random() - 0.5) * 20,
-      priceChange7d: (Math.random() - 0.5) * 50,
-      volumeChange: (Math.random() - 0.5) * 100,
-      wasCorrect: Math.random() > 0.3, // 70% accuracy
-      timestamp: Date.now()
-    };
-
-    await agent.attestOutcome(conviction, outcome);
-    console.log('');
-  }
-
-  // Step 4: Check reputation
-  console.log('📈 PHASE 3: Reputation Summary\n');
-  const reputation = await agent.getReputation();
-  console.log('Agent Wallet Intelligence Reputation:', {
-    'Total Predictions': reputation.totalPredictions,
-    'Correct Predictions': reputation.correctPredictions,
-    'Accuracy': `${(reputation.accuracy * 100).toFixed(1)}%`,
-    'Avg Conviction': reputation.averageConviction.toFixed(1)
-  });
-
-  console.log('\n🏆 Use Cases:');
-  console.log('- AI trading agents build verifiable wallet analysis reputation');
-  console.log('- Users can trust agents based on historical conviction accuracy');
-  console.log('- Solder-Cortex signals gain credibility through on-chain attestation');
-  console.log('- Agents can be ranked by wallet intelligence performance');
+  // Keep process alive
+  await new Promise(() => {});
 }
 
 // Run example
-main().catch(console.error);
+if (require.main === module) {
+  main().catch(console.error);
+}
+
+export { WalletConvictionModule, MockSolderCortex };
