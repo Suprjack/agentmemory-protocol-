@@ -63,7 +63,9 @@ jobs:
           solana airdrop 2 --url devnet || true
       
       - name: Build program
-        run: anchor build
+        run: |
+          cargo update
+          anchor build
       
       - name: Deploy to devnet
         run: |
