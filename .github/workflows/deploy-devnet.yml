@@ -29,9 +29,7 @@ jobs:
       
       - name: Setup Anchor
         run: |
-          mkdir -p ~/.cargo/bin
-          curl -sSfL https://github.com/coral-xyz/anchor/releases/download/v0.29.0/anchor-cli-v0.29.0-x86_64-unknown-linux-gnu.tar.gz | tar -xz --strip-components=1 -C ~/.cargo/bin
-          chmod +x ~/.cargo/bin/anchor
+          cargo install --git https://github.com/coral-xyz/anchor --tag v0.29.0 anchor-cli --locked
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           anchor --version
 
