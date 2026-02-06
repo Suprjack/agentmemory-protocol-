@@ -30,13 +30,16 @@ jobs:
       - name: Setup Anchor
         run: |
           cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
-          avm install --force 0.29.0
+          avm install 0.29.0 || echo "Anchor already installed"
           avm use 0.29.0
-      
+
       - name: Configure Solana
+        env:
+          SOLANA_KEYPAIR_DEVNET: ${{ secrets.SOLANA_KEYPAIR_DEVNET }}
         run: |
           solana config set --url devnet
-          solana-keygen new --no-bip39-passphrase --silent --outfile ~/.config/solana/id.json
+          mkdir -p ~/.config/solana
+          echo "$SOLANA_KEYPAIR_DEVNET" | base64 -d > ~/.config/solana/id.json
           solana airdrop 2 --url devnet || echo "Airdrop may fail, continuing..."
       
       - name: Build program
