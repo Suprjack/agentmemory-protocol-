@@ -33,10 +33,10 @@ jobs:
 
       - name: Setup Solana CLI
         run: |
-          wget -q https://github.com/solana-labs/solana/releases/download/v1.18.0/solana-release-x86_64-unknown-linux-gnu.tar.bz2
-          tar jxf solana-release-x86_64-unknown-linux-gnu.tar.bz2
+          curl -L https://github.com/solana-labs/solana/releases/download/v1.18.0/solana-release-x86_64-unknown-linux-gnu.tar.bz2 -o solana.tar.bz2
+          tar jxf solana.tar.bz2
           mkdir -p $HOME/.local/bin
-          cp solana-release/bin/* $HOME/.local/bin/
+          cp -r solana-release/bin/* $HOME/.local/bin/
           echo "$HOME/.local/bin" >> $GITHUB_PATH
           export PATH="$HOME/.local/bin:$PATH"
           solana --version
