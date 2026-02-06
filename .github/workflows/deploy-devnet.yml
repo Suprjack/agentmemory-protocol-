@@ -10,38 +10,26 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-    
+    runs-on: ubuntu-20.04
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
+
+      - name: Setup Anchor Environment
+        uses: metadaoproject/setup-anchor@v3.1
         with:
-          toolchain: stable
-          override: true
+          anchor-version: '0.30.1'
+          solana-cli-version: '1.18.18'
+          node-version: '20.16.0'
 
-      - name: Setup Solana CLI
+      - name: Verify Installation
         run: |
-          curl -L https://github.com/solana-labs/solana/releases/download/v1.18.0/solana-release-x86_64-unknown-linux-gnu.tar.bz2 -o solana.tar.bz2
-          tar jxf solana.tar.bz2
-          mkdir -p $HOME/.local/bin
-          cp -r solana-release/bin/* $HOME/.local/bin/
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-          export PATH="$HOME/.local/bin:$PATH"
-          solana --version
-      
-      - name: Setup Anchor 0.29.0
-        run: |
-          cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-          export PATH="$HOME/.cargo/bin:$PATH"
-          echo 'y' | avm install 0.29.0
-          avm use 0.29.0
-          anchor --version
+          echo "Anchor: $(anchor --version)"
+          echo "Solana: $(solana --version)"
+          echo "Node: $(node --version)"
 
-      - name: Configure Solana
+      - name: Configure Solana Wallet
         env:
           SOLANA_KEYPAIR_DEVNET: ${{ secrets.SOLANA_KEYPAIR_DEVNET }}
         run: |
@@ -49,33 +37,40 @@ jobs:
           mkdir -p ~/.config/solana
           echo "$SOLANA_KEYPAIR_DEVNET" | base64 -d > ~/.config/solana/id.json
           chmod 600 ~/.config/solana/id.json
-          solana address
-          solana airdrop 2 --url devnet || true
-      
-      - name: Build program
-        run: |
-          cargo update
-          anchor build
-      
-      - name: Deploy to devnet
+          echo "Wallet: $(solana address)"
+          solana balance || true
+
+      - name: Build Program
+        run: anchor build
+
+      - name: Deploy to Devnet
         run: |
           anchor deploy --provider.cluster devnet
-          echo "Program deployed!"
-      
-      - name: Save program ID
+          echo "✅ Program deployed successfully!"
+
+      - name: Get Program ID
+        id: program_id
         run: |
-          PROGRAM_ID=$(solana address -k target/deploy/agentmemory_protocol-keypair.json)
-          echo "PROGRAM_ID=$PROGRAM_ID" >> $GITHUB_ENV
-          echo "Program ID: $PROGRAM_ID"
-      
-      - name: Create deployment artifact
+          PROGRAM_ID=$(solana address -k target/deploy/agentmemory-keypair.json)
+          echo "program_id=$PROGRAM_ID" >> $GITHUB_OUTPUT
+          echo "🎯 Program ID: $PROGRAM_ID"
+
+      - name: Create Deployment Report
         run: |
           mkdir -p deployment
-          echo "Deployed to devnet at $(date)" > deployment/devnet-deployment.txt
-          echo "Program ID: $PROGRAM_ID" >> deployment/devnet-deployment.txt
-          solana program show $PROGRAM_ID >> deployment/devnet-deployment.txt
-      
-      - name: Upload artifact
+          cat > deployment/devnet-deployment.txt << EOF
+          ========================================
+          AgentMemory Protocol - Devnet Deployment
+          ========================================
+          Date: $(date -u)
+          Program ID: ${{ steps.program_id.outputs.program_id }}
+          Network: Devnet
+          Explorer: https://explorer.solana.com/address/${{ steps.program_id.outputs.program_id }}?cluster=devnet
+          ========================================
+          EOF
+          cat deployment/devnet-deployment.txt
+
+      - name: Upload Deployment Artifact
         uses: actions/upload-artifact@v4
         with:
           name: devnet-deployment
