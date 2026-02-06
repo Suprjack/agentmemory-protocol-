@@ -48,9 +48,14 @@ jobs:
         env:
           SOLANA_KEYPAIR_DEVNET: ${{ secrets.SOLANA_KEYPAIR_DEVNET }}
         run: |
+          export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
+          which solana
+          solana --version
           solana config set --url devnet
           mkdir -p ~/.config/solana
           echo "$SOLANA_KEYPAIR_DEVNET" | base64 -d > ~/.config/solana/id.json
+          chmod 600 ~/.config/solana/id.json
+          solana address
           solana airdrop 2 --url devnet || echo "Airdrop may fail, continuing..."
       
       - name: Build program
