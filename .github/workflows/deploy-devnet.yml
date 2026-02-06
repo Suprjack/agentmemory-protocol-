@@ -21,7 +21,16 @@ jobs:
         with:
           toolchain: stable
           override: true
-      
+
+      - name: Cache Anchor
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/anchor
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-anchor-0.29.0
+
       - name: Setup Solana CLI
         run: |
           sh -c "$(curl -sSfL https://release.solana.com/v1.18.0/install)"
@@ -29,7 +38,9 @@ jobs:
       
       - name: Setup Anchor
         run: |
-          cargo install --git https://github.com/coral-xyz/anchor --tag v0.29.0 anchor-cli --locked
+          if ! command -v anchor &> /dev/null; then
+            cargo install --git https://github.com/coral-xyz/anchor --tag v0.29.0 anchor-cli --locked
+          fi
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           anchor --version
 
