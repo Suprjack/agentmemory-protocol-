@@ -61,7 +61,7 @@ jobs:
           solana program show $PROGRAM_ID >> deployment/devnet-deployment.txt
       
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: devnet-deployment
           path: deployment/
