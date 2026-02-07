@@ -28,6 +28,11 @@ jobs:
       - name: Update Cargo to latest
         run: rustup update stable && rustup default stable
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libudev-dev pkg-config
+
       - name: Cache Cargo
         uses: actions/cache@v4
         with:
