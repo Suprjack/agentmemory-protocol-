@@ -1,6 +1,7 @@
 # Anchor
 .anchor
 target/
+Cargo.lock
 **/*.rs.bk
 test-ledger/
 
