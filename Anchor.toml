@@ -3,10 +3,10 @@ seeds = false
 skip-lint = false
 
 [programs.devnet]
-agent_memory = "AgMemXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+agentmemory = "9dn82CtCJLpyCgFSaA1DMYL4GyGk16vhUFuRyDELNrnQ"
 
 [programs.localnet]
-agent_memory = "AgMemXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+agentmemory = "9dn82CtCJLpyCgFSaA1DMYL4GyGk16vhUFuRyDELNrnQ"
 
 [registry]
 url = "https://api.apr.dev"
