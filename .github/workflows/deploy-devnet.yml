@@ -7,6 +7,12 @@ on:
     paths:
       - 'programs/**'
       - 'Anchor.toml'
+      - 'Cargo.toml'
+      - '.github/workflows/deploy-devnet.yml'
+
+env:
+  SOLANA_VERSION: "1.18.18"
+  ANCHOR_VERSION: "0.31.0"
 
 jobs:
   deploy:
@@ -14,70 +20,98 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Cache Solana
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/solana
+          key: ${{ runner.os }}-solana-${{ env.SOLANA_VERSION }}
 
       - name: Install Solana CLI
         run: |
-          sh -c "$(curl -sSfL https://release.anza.xyz/v1.18.18/install)" || \
-          sh -c "$(curl -sSfL https://release.solana.com/v1.18.18/install)"
+          if ! command -v solana &> /dev/null; then
+            sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)" || \
+            sh -c "$(curl -sSfL https://release.solana.com/v${{ env.SOLANA_VERSION }}/install)"
+          fi
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
 
-      - name: Setup Anchor
+      - name: Install Anchor CLI
         run: |
-          cargo install --git https://github.com/coral-xyz/anchor --tag v0.31.0 anchor-cli --locked --force
+          if ! command -v anchor &> /dev/null || [[ "$(anchor --version)" != *"${{ env.ANCHOR_VERSION }}"* ]]; then
+            cargo install --git https://github.com/coral-xyz/anchor --tag v${{ env.ANCHOR_VERSION }} anchor-cli --locked --force
+          fi
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Verify Installation
         run: |
-          export PATH="$HOME/.local/share/solana/install/active_release/bin:$HOME/.cargo/bin:$PATH"
-          echo "Solana: $(solana --version)"
-          echo "Anchor: $(anchor --version)"
+          solana --version
+          anchor --version
 
-      - name: Configure Solana Wallet
+      - name: Configure Wallet
         env:
           SOLANA_KEYPAIR_DEVNET: ${{ secrets.SOLANA_KEYPAIR_DEVNET }}
         run: |
-          solana config set --url devnet
           mkdir -p ~/.config/solana
           echo "$SOLANA_KEYPAIR_DEVNET" > ~/.config/solana/id.json
           chmod 600 ~/.config/solana/id.json
+          solana config set --url devnet
           echo "Wallet: $(solana address)"
-          solana balance || echo "No balance yet"
 
-      - name: Build Program
+      - name: Check Balance
+        run: |
+          BALANCE=$(solana balance --lamports | awk '{print $1}')
+          MIN_BALANCE=50000000  # 0.05 SOL in lamports
+          if [ "$BALANCE" -lt "$MIN_BALANCE" ]; then
+            echo "❌ Insufficient balance: $BALANCE lamports (minimum 50000000)"
+            echo "Please fund wallet: $(solana address)"
+            exit 1
+          fi
+          echo "✅ Balance OK: $(solana balance)"
+
+      - name: Sync Keys and Build
         run: |
           anchor keys sync
           anchor build
 
       - name: Deploy to Devnet
+        id: deploy
         run: |
           anchor deploy --provider.cluster devnet
-          echo "✅ Program deployed successfully!"
-
-      - name: Get Program ID
-        id: program_id
-        run: |
           PROGRAM_ID=$(solana address -k target/deploy/agentmemory-keypair.json)
           echo "program_id=$PROGRAM_ID" >> $GITHUB_OUTPUT
-          echo "🎯 Program ID: $PROGRAM_ID"
+          echo "✅ Deployed: $PROGRAM_ID"
 
       - name: Create Deployment Report
         run: |
-          mkdir -p deployment
-          cat > deployment/devnet-deployment.txt << EOF
-          ========================================
-          AgentMemory Protocol - Devnet Deployment
-          ========================================
-          Date: $(date -u)
-          Program ID: ${{ steps.program_id.outputs.program_id }}
-          Network: Devnet
-          Explorer: https://explorer.solana.com/address/${{ steps.program_id.outputs.program_id }}?cluster=devnet
-          ========================================
-          EOF
-          cat deployment/devnet-deployment.txt
+          mkdir -p artifacts
+          cat > artifacts/deployment.md << EOF
+          # AgentMemory Protocol - Devnet Deployment
 
-      - name: Upload Deployment Artifact
+          | Field | Value |
+          |-------|-------|
+          | Date | $(date -u) |
+          | Network | Devnet |
+          | Program ID | ${{ steps.deploy.outputs.program_id }} |
+          | Commit | ${{ github.sha }} |
+          | Explorer | https://explorer.solana.com/address/${{ steps.deploy.outputs.program_id }}?cluster=devnet |
+          EOF
+          cat artifacts/deployment.md
+
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: devnet-deployment
-          path: deployment/
+          name: devnet-deployment-${{ github.run_number }}
+          path: artifacts/

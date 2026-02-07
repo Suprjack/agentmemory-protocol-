@@ -1,14 +1,18 @@
 [toolchain]
 anchor_version = "0.31.0"
+solana_version = "1.18.18"
 
 [features]
-seeds = false
+resolution = true
 skip-lint = false
+
+[programs.localnet]
+agentmemory = "9dn82CtCJLpyCgFSaA1DMYL4GyGk16vhUFuRyDELNrnQ"
 
 [programs.devnet]
 agentmemory = "9dn82CtCJLpyCgFSaA1DMYL4GyGk16vhUFuRyDELNrnQ"
 
-[programs.localnet]
+[programs.mainnet]
 agentmemory = "9dn82CtCJLpyCgFSaA1DMYL4GyGk16vhUFuRyDELNrnQ"
 
 [registry]

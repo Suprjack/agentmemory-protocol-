@@ -44,3 +44,9 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Wallet files - CRITICAL SECURITY
+.wallet-base64.txt
+.wallet.json
+*.pem
+id_rsa*
