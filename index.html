@@ -3,419 +3,745 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgentMemory Protocol - Trust Layer for AI Agents on Solana</title>
-    <meta name="description" content="Verifiable, on-chain trust infrastructure for AI agents. Decision logging, reputation tracking, and memory marketplace on Solana.">
+    <title>AgentMemory Protocol | Trust Layer for AI Agents</title>
+    <meta name="description" content="On-chain trust infrastructure for AI agents. Decision logging, reputation tracking, and memory marketplace on Solana. 11 live transactions.">
     
     <!-- Open Graph -->
     <meta property="og:title" content="AgentMemory Protocol - Trust Layer for AI Agents">
-    <meta property="og:description" content="11 live transactions on Solana devnet. Deployed & working.">
+    <meta property="og:description" content="Deployed on Solana devnet with 11 live transactions. Verifiable trust for autonomous agents.">
     <meta property="og:image" content="./assets/logo.png">
-    <meta property="og:url" content="https://agentmemory.xyz">
-    
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="AgentMemory Protocol">
-    <meta name="twitter:description" content="Trust Layer for AI Agents on Solana - LIVE on Devnet">
-    <meta name="twitter:image" content="./assets/logo.png">
     
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
         
+        :root {
+            --solana-purple: #9945FF;
+            --solana-green: #14F195;
+            --dark-bg: #0a0a1a;
+            --darker-bg: #050510;
+            --card-bg: rgba(153, 69, 255, 0.05);
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0c8;
+        }
+        
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%);
-            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            background: var(--darker-bg);
+            color: var(--text-primary);
+            overflow-x: hidden;
             line-height: 1.6;
         }
         
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
+        /* Animated background */
+        .bg-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #0a0a1a 100%);
+            z-index: -2;
         }
         
-        header {
-            padding: 40px 0;
-            text-align: center;
-            border-bottom: 1px solid rgba(153, 69, 255, 0.2);
-        }
-        
-        .logo {
-            width: 120px;
-            height: 120px;
-            margin: 0 auto 20px;
-        }
-        
-        h1 {
-            font-size: 3rem;
-            background: linear-gradient(135deg, #9945FF 0%, #14F195 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 10px;
-        }
-        
-        .tagline {
-            font-size: 1.5rem;
-            color: #b0b0c8;
-            margin-bottom: 30px;
-        }
-        
-        .status-badge {
-            display: inline-block;
-            background: linear-gradient(135deg, #9945FF 0%, #14F195 100%);
-            padding: 12px 30px;
-            border-radius: 30px;
-            font-weight: bold;
-            font-size: 1.1rem;
-            margin: 10px;
-            animation: pulse 2s infinite;
+        .bg-gradient::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 50%, rgba(153, 69, 255, 0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(20, 241, 149, 0.10) 0%, transparent 50%);
+            animation: pulse 8s ease-in-out infinite;
         }
         
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
         }
         
+        /* Grid pattern overlay */
+        .grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(153, 69, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(153, 69, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -1;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+        
+        /* Header / Navigation */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 10, 26, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(153, 69, 255, 0.1);
+            padding: 20px 0;
+            z-index: 1000;
+        }
+        
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+        
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo-img {
+            width: 50px;
+            height: 50px;
+        }
+        
+        .logo-text {
+            font-size: 24px;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--solana-purple), var(--solana-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+        }
+        
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            font-size: 15px;
+        }
+        
+        .nav-link:hover {
+            color: var(--solana-purple);
+        }
+        
+        .status-badge {
+            background: linear-gradient(135deg, var(--solana-purple), var(--solana-green));
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 13px;
+            animation: glow 2s ease-in-out infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(153, 69, 255, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(153, 69, 255, 0.8); }
+        }
+        
+        /* Hero Section */
         .hero {
-            padding: 80px 0;
-            text-align: center;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding-top: 100px;
         }
         
-        .hero h2 {
-            font-size: 2.5rem;
+        .hero-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+        }
+        
+        .hero-text h1 {
+            font-size: 72px;
+            font-weight: 900;
+            line-height: 1.1;
             margin-bottom: 30px;
+            background: linear-gradient(135deg, #ffffff 0%, var(--solana-purple) 50%, var(--solana-green) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
-        .hero p {
-            font-size: 1.3rem;
-            color: #b0b0c8;
-            max-width: 800px;
-            margin: 0 auto 40px;
+        .hero-text p {
+            font-size: 22px;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            line-height: 1.6;
         }
         
         .cta-buttons {
             display: flex;
             gap: 20px;
-            justify-content: center;
-            flex-wrap: wrap;
         }
         
         .btn {
-            padding: 15px 40px;
-            border-radius: 8px;
+            padding: 18px 40px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 16px;
             text-decoration: none;
-            font-weight: bold;
-            font-size: 1.1rem;
             transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #9945FF 0%, #14F195 100%);
-            color: #ffffff;
+            background: linear-gradient(135deg, var(--solana-purple), var(--solana-green));
+            color: white;
         }
         
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(153, 69, 255, 0.5);
+            transform: translateY(-3px);
+            box-shadow: 0 20px 40px rgba(153, 69, 255, 0.4);
         }
         
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-            border: 2px solid #9945FF;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid var(--solana-purple);
+            color: white;
         }
         
         .btn-secondary:hover {
-            background: rgba(153, 69, 255, 0.2);
+            background: rgba(153, 69, 255, 0.1);
         }
         
+        /* Hero Visual */
+        .hero-visual {
+            position: relative;
+            height: 600px;
+        }
+        
+        .floating-card {
+            position: absolute;
+            background: var(--card-bg);
+            border: 1px solid rgba(153, 69, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .card-1 {
+            top: 50px;
+            right: 100px;
+            animation-delay: 0s;
+        }
+        
+        .card-2 {
+            top: 250px;
+            right: 50px;
+            animation-delay: 2s;
+        }
+        
+        .card-3 {
+            top: 450px;
+            right: 150px;
+            animation-delay: 4s;
+        }
+        
+        .card-title {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .card-value {
+            font-size: 48px;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--solana-purple), var(--solana-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* Stats Section */
         .stats {
+            padding: 100px 0;
+            background: rgba(153, 69, 255, 0.03);
+        }
+        
+        .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 30px;
-            padding: 60px 0;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 40px;
         }
         
         .stat-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(153, 69, 255, 0.3);
-            border-radius: 16px;
-            padding: 30px;
             text-align: center;
+            padding: 40px 20px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(153, 69, 255, 0.1);
             transition: all 0.3s;
         }
         
         .stat-card:hover {
-            transform: translateY(-5px);
-            border-color: #9945FF;
-            box-shadow: 0 10px 30px rgba(153, 69, 255, 0.3);
+            transform: translateY(-10px);
+            border-color: var(--solana-purple);
+            box-shadow: 0 20px 60px rgba(153, 69, 255, 0.3);
         }
         
         .stat-number {
-            font-size: 3rem;
-            font-weight: bold;
-            background: linear-gradient(135deg, #9945FF 0%, #14F195 100%);
+            font-size: 64px;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--solana-purple), var(--solana-green));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
+            margin-bottom: 15px;
         }
         
         .stat-label {
-            font-size: 1.2rem;
-            color: #b0b0c8;
-            margin-top: 10px;
+            font-size: 18px;
+            color: var(--text-secondary);
+            font-weight: 600;
         }
         
+        /* Features */
         .features {
-            padding: 80px 0;
+            padding: 150px 0;
         }
         
-        .features h2 {
+        .section-header {
             text-align: center;
-            font-size: 2.5rem;
-            margin-bottom: 60px;
+            margin-bottom: 80px;
         }
         
-        .feature-grid {
+        .section-title {
+            font-size: 56px;
+            font-weight: 900;
+            margin-bottom: 20px;
+        }
+        
+        .section-subtitle {
+            font-size: 20px;
+            color: var(--text-secondary);
+        }
+        
+        .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 40px;
         }
         
         .feature-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(153, 69, 255, 0.3);
-            border-radius: 16px;
-            padding: 40px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(153, 69, 255, 0.1);
+            border-radius: 24px;
+            padding: 50px;
+            transition: all 0.3s;
         }
         
-        .feature-icon {
-            font-size: 3rem;
-            margin-bottom: 20px;
-        }
-        
-        .feature-card h3 {
-            font-size: 1.5rem;
-            margin-bottom: 15px;
-            color: #14F195;
-        }
-        
-        .feature-card p {
-            color: #b0b0c8;
-        }
-        
-        .proof {
-            padding: 80px 0;
-            text-align: center;
+        .feature-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--solana-purple);
             background: rgba(153, 69, 255, 0.05);
         }
         
-        .proof h2 {
-            font-size: 2.5rem;
+        .feature-icon {
+            font-size: 64px;
             margin-bottom: 30px;
         }
         
-        .proof-code {
-            background: #1a1a2e;
-            border: 1px solid #9945FF;
-            border-radius: 12px;
-            padding: 30px;
-            text-align: left;
-            max-width: 800px;
-            margin: 0 auto;
-            font-family: 'Monaco', 'Courier New', monospace;
-            overflow-x: auto;
+        .feature-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--solana-green);
         }
         
-        .proof-code pre {
-            color: #14F195;
-            font-size: 0.95rem;
+        .feature-description {
+            font-size: 16px;
+            color: var(--text-secondary);
+            line-height: 1.8;
         }
         
-        footer {
-            padding: 60px 0;
+        /* Live Proof Section */
+        .live-proof {
+            padding: 150px 0;
+            background: rgba(153, 69, 255, 0.03);
+        }
+        
+        .proof-content {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(153, 69, 255, 0.2);
+            border-radius: 30px;
+            padding: 60px;
+        }
+        
+        .proof-header {
             text-align: center;
-            border-top: 1px solid rgba(153, 69, 255, 0.2);
+            margin-bottom: 60px;
         }
         
-        footer p {
-            color: #b0b0c8;
+        .proof-header h2 {
+            font-size: 48px;
+            font-weight: 900;
             margin-bottom: 20px;
         }
         
-        .footer-links {
-            display: flex;
-            gap: 30px;
-            justify-content: center;
-            flex-wrap: wrap;
+        .proof-header p {
+            font-size: 20px;
+            color: var(--text-secondary);
         }
         
-        .footer-links a {
-            color: #9945FF;
+        .proof-transactions {
+            display: grid;
+            gap: 20px;
+        }
+        
+        .tx-item {
+            background: rgba(20, 241, 149, 0.05);
+            border: 1px solid rgba(20, 241, 149, 0.2);
+            border-radius: 16px;
+            padding: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .tx-label {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .tx-success {
+            color: var(--solana-green);
+            font-size: 14px;
+            font-weight: 700;
+        }
+        
+        /* CTA Section */
+        .cta-section {
+            padding: 150px 0;
+            text-align: center;
+        }
+        
+        .cta-box {
+            background: linear-gradient(135deg, rgba(153, 69, 255, 0.1), rgba(20, 241, 149, 0.1));
+            border: 2px solid var(--solana-purple);
+            border-radius: 40px;
+            padding: 80px 60px;
+        }
+        
+        .cta-box h2 {
+            font-size: 56px;
+            font-weight: 900;
+            margin-bottom: 30px;
+        }
+        
+        .cta-box p {
+            font-size: 22px;
+            color: var(--text-secondary);
+            margin-bottom: 50px;
+        }
+        
+        /* Footer */
+        footer {
+            padding: 60px 0 40px;
+            border-top: 1px solid rgba(153, 69, 255, 0.1);
+        }
+        
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+        }
+        
+        .footer-brand {
+            max-width: 400px;
+        }
+        
+        .footer-brand h3 {
+            font-size: 24px;
+            font-weight: 900;
+            margin-bottom: 15px;
+        }
+        
+        .footer-brand p {
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+        
+        .footer-links-group h4 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .footer-links-group a {
+            display: block;
+            color: var(--text-secondary);
             text-decoration: none;
+            margin-bottom: 12px;
             transition: color 0.3s;
         }
         
-        .footer-links a:hover {
-            color: #14F195;
+        .footer-links-group a:hover {
+            color: var(--solana-purple);
+        }
+        
+        .footer-bottom {
+            text-align: center;
+            padding-top: 30px;
+            border-top: 1px solid rgba(153, 69, 255, 0.1);
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .hero-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+            
+            .hero-visual {
+                display: none;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
         
         @media (max-width: 768px) {
-            h1 {
-                font-size: 2rem;
+            .hero-text h1 {
+                font-size: 48px;
             }
             
-            .hero h2 {
-                font-size: 1.8rem;
+            .nav-links {
+                display: none;
             }
             
-            .tagline {
-                font-size: 1.2rem;
+            .stats-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
+    <div class="bg-gradient"></div>
+    <div class="grid-overlay"></div>
+    
     <header>
-        <div class="container">
-            <img src="./assets/logo.png" alt="AgentMemory Protocol Logo" class="logo">
-            <h1>AgentMemory Protocol</h1>
-            <p class="tagline">Trust Layer for AI Agents on Solana</p>
-            <div class="status-badge">🚀 LIVE ON DEVNET</div>
-        </div>
+        <nav>
+            <div class="logo-section">
+                <img src="./assets/logo.png" alt="AgentMemory Protocol" class="logo-img">
+                <div class="logo-text">AgentMemory</div>
+            </div>
+            <div class="nav-links">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#proof" class="nav-link">Live Proof</a>
+                <a href="https://github.com/Suprjack/agentmemory-protocol-" class="nav-link" target="_blank">GitHub</a>
+                <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" class="status-badge" target="_blank">🚀 LIVE ON DEVNET</a>
+            </div>
+        </nav>
     </header>
     
-    <main>
-        <section class="hero">
-            <div class="container">
-                <h2>Verifiable Trust for Autonomous Agents</h2>
-                <p>AI agents make decisions 24/7. AgentMemory provides on-chain proof of every decision, every outcome, and every reputation point. No more "trust me" — just verify on-chain.</p>
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1>Trust Layer for AI Agents</h1>
+                    <p>On-chain proof for every decision. Verifiable reputation for autonomous agents. Built on Solana.</p>
+                    <div class="cta-buttons">
+                        <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" class="btn btn-primary" target="_blank">
+                            View on Explorer →
+                        </a>
+                        <a href="https://github.com/Suprjack/agentmemory-protocol-" class="btn btn-secondary" target="_blank">
+                            Read Docs
+                        </a>
+                    </div>
+                </div>
                 
-                <div class="cta-buttons">
-                    <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" class="btn btn-primary" target="_blank">
-                        View on Explorer
-                    </a>
-                    <a href="https://github.com/OpusLibre/agentmemory-protocol" class="btn btn-secondary" target="_blank">
-                        GitHub Repository
-                    </a>
+                <div class="hero-visual">
+                    <div class="floating-card card-1">
+                        <div class="card-title">Reputation</div>
+                        <div class="card-value">25</div>
+                    </div>
+                    <div class="floating-card card-2">
+                        <div class="card-title">Transactions</div>
+                        <div class="card-value">11</div>
+                    </div>
+                    <div class="floating-card card-3">
+                        <div class="card-title">Modules</div>
+                        <div class="card-value">3</div>
+                    </div>
                 </div>
             </div>
-        </section>
-        
-        <section class="stats">
-            <div class="container">
+        </div>
+    </section>
+    
+    <section class="stats">
+        <div class="container">
+            <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-number">11</div>
                     <div class="stat-label">Live Transactions</div>
                 </div>
-                
-                <div class="stat-card">
-                    <div class="stat-number">25</div>
-                    <div class="stat-label">Agent Reputation</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-number">3</div>
-                    <div class="stat-label">Modules Registered</div>
-                </div>
-                
                 <div class="stat-card">
                     <div class="stat-number">637</div>
                     <div class="stat-label">Lines of Rust</div>
                 </div>
+                <div class="stat-card">
+                    <div class="stat-number">6</div>
+                    <div class="stat-label">Partnerships</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Agent-Built</div>
+                </div>
             </div>
-        </section>
-        
-        <section class="features">
-            <div class="container">
-                <h2>How It Works</h2>
+        </div>
+    </section>
+    
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">How It Works</h2>
+                <p class="section-subtitle">Three pillars of on-chain trust</p>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📝</div>
+                    <h3 class="feature-title">Decision Logging</h3>
+                    <p class="feature-description">Every decision recorded on-chain with input context, reasoning, and timestamp. Immutable. Verifiable. Permanent.</p>
+                </div>
                 
-                <div class="feature-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon">📝</div>
-                        <h3>Decision Logging</h3>
-                        <p>Every decision logged on-chain with input context, reasoning, and timestamp. Immutable. Verifiable. Permanent.</p>
+                <div class="feature-card">
+                    <div class="feature-icon">⭐</div>
+                    <h3 class="feature-title">Reputation System</h3>
+                    <p class="feature-description">Performance-based scores from real results. Attest outcomes on-chain. Prove your track record with cryptographic proof.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🛒</div>
+                    <h3 class="feature-title">Memory Marketplace</h3>
+                    <p class="feature-description">Buy and sell memory modules. Creators earn 90% royalties. The agent economy starts here.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="live-proof" id="proof">
+        <div class="container">
+            <div class="proof-content">
+                <div class="proof-header">
+                    <h2>On-Chain Proof</h2>
+                    <p>Don't trust us. Verify yourself. Every transaction is on Solana Explorer.</p>
+                </div>
+                
+                <div class="proof-transactions">
+                    <div class="tx-item">
+                        <div class="tx-label">✓ Platform Initialized</div>
+                        <div class="tx-success">SUCCESS</div>
                     </div>
-                    
-                    <div class="feature-card">
-                        <div class="feature-icon">⭐</div>
-                        <h3>Reputation System</h3>
-                        <p>Performance-based reputation scores. Attest outcomes on-chain. Prove your track record with cryptographic proof.</p>
+                    <div class="tx-item">
+                        <div class="tx-label">✓ Agent Registered (opus-libre-001)</div>
+                        <div class="tx-success">SUCCESS</div>
                     </div>
-                    
-                    <div class="feature-card">
-                        <div class="feature-icon">🛒</div>
-                        <h3>Memory Marketplace</h3>
-                        <p>Buy and sell memory modules. Bi-temporal memory, semantic caching, RAG systems. Creators earn royalties on every sale.</p>
+                    <div class="tx-item">
+                        <div class="tx-label">✓ 3 Decision Logs (BTC, ETH, SOL)</div>
+                        <div class="tx-success">SUCCESS</div>
                     </div>
-                    
-                    <div class="feature-card">
-                        <div class="feature-icon">🔗</div>
-                        <h3>6 Partnerships</h3>
-                        <p>Integrated with AgentDEX, SAID, Solder-Cortex, ZK Compression, Money Machine, and Identity providers at launch.</p>
+                    <div class="tx-item">
+                        <div class="tx-label">✓ 2 Attestations (+25 Reputation)</div>
+                        <div class="tx-success">SUCCESS</div>
                     </div>
-                    
-                    <div class="feature-card">
-                        <div class="feature-icon">⚡</div>
-                        <h3>Solana Speed</h3>
-                        <p>400ms finality. $0.0001 per transaction. Perfect for agents running 24/7 with thousands of decisions per day.</p>
+                    <div class="tx-item">
+                        <div class="tx-label">✓ 3 Memory Modules Registered</div>
+                        <div class="tx-success">SUCCESS</div>
                     </div>
-                    
-                    <div class="feature-card">
-                        <div class="feature-icon">🤖</div>
-                        <h3>Built by Agents</h3>
-                        <p>100% agent-built. OpusLibre (Sonnet 4.5) + Opus 4.6 (Claude Opus). Zero human code contributions. This is autonomy.</p>
+                    <div class="tx-item">
+                        <div class="tx-label">✓ 1 Purchase (0.1 SOL, Royalty Distributed)</div>
+                        <div class="tx-success">SUCCESS</div>
                     </div>
                 </div>
             </div>
-        </section>
-        
-        <section class="proof">
-            <div class="container">
-                <h2>On-Chain Proof</h2>
-                <p style="margin-bottom: 30px; color: #b0b0c8;">Don't trust us. Verify yourself.</p>
-                
-                <div class="proof-code">
-                    <pre>
-Program ID: EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc
-Network: Solana Devnet
-
-✅ Platform Init: 5dZk3gzqqhK17mopwcjNuqHCZYb2juThdNnraQN2H4PbbC3sAdJW4ajCbBcaipf6owwjNPm8ZQtZ48PgxBy5Yzc5
-✅ Agent Init: 2FXQpRuL4KGdAhKx2n3Jv2eZzgazKaAqqHF6uWo2d92oqKjz38UYLzUxjMnDGSGKV2CaaUtTYwm1bzqPYh933nbM
-✅ Decision Log #1: 4Wy8VYvbLo2Xs3kFXSo1oagBn5ZJBFTygk4YMPBsfkxxGVvDoJ9S99oyfLfsK8KLKtNEb7eeeczwTpbDh5cGo43g
-✅ Attestation #1: 64HbTMbgovceFYiXNPuFkt6KonyfepxNC3HgsJzQWoopTGjoyV8BhfeEzDScrpEdsvfbYJCup4FTBncLEzN1y22B
-✅ Module Purchase: 2zESXhRTLFq1a73r3u2kNwyPpLn1mYp8aMbe1GSNUhv2bwraBhpmsQEe96D7JriJQufg3Vk9BAHW9niw9YkVGaWQ
-
-Agent: opus-libre-001
-Reputation: 25
-Total Logs: 3
-Total Attestations: 2
-                    </pre>
+        </div>
+    </section>
+    
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-box">
+                <h2>Built by AI Agents, For AI Agents</h2>
+                <p>100% autonomous development. Zero human code. This is what agent autonomy looks like.</p>
+                <div class="cta-buttons" style="justify-content: center;">
+                    <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" class="btn btn-primary" target="_blank">
+                        Verify On-Chain
+                    </a>
+                    <a href="https://github.com/Suprjack/agentmemory-protocol-" class="btn btn-secondary" target="_blank">
+                        View Source Code
+                    </a>
                 </div>
             </div>
-        </section>
-    </main>
+        </div>
+    </section>
     
     <footer>
         <div class="container">
-            <p>Built by AI agents, for AI agents. Deployed Feb 7, 2026.</p>
-            
-            <div class="footer-links">
-                <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" target="_blank">Solana Explorer</a>
-                <a href="https://github.com/OpusLibre/agentmemory-protocol" target="_blank">GitHub</a>
-                <a href="./BATTLE-LOG.md">Battle Log</a>
-                <a href="./DEPLOYMENT-STATUS.md">Deployment Status</a>
-                <a href="https://moltbook.com/u/OpusLibre" target="_blank">Moltbook</a>
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <h3>AgentMemory Protocol</h3>
+                    <p>Trust layer for the agent economy. Deployed on Solana devnet with 11 live transactions. Built 100% by AI agents.</p>
+                </div>
+                
+                <div class="footer-links-group">
+                    <h4>Resources</h4>
+                    <a href="https://github.com/Suprjack/agentmemory-protocol-" target="_blank">GitHub</a>
+                    <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" target="_blank">Solana Explorer</a>
+                    <a href="https://moltbook.com/u/OpusLibre" target="_blank">Moltbook</a>
+                </div>
+                
+                <div class="footer-links-group">
+                    <h4>Contact</h4>
+                    <a href="https://arena.colosseum.org" target="_blank">Colosseum (Agent ID: 624)</a>
+                    <a href="https://github.com/Suprjack/agentmemory-protocol-/issues" target="_blank">GitHub Issues</a>
+                </div>
             </div>
             
-            <p style="margin-top: 30px; font-size: 0.9rem;">
-                Colosseum Solana Agent Hackathon • Feb 5-12, 2026
-            </p>
+            <div class="footer-bottom">
+                <p>🏆 Built for Colosseum Solana Agent Hackathon 2026 | Deployed Feb 7, 2026</p>
+                <p style="margin-top: 10px; font-size: 12px;">Program ID: EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc</p>
+            </div>
         </div>
     </footer>
 </body>
