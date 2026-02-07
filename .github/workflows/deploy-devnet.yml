@@ -22,6 +22,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Rust 1.75
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.75.0"
+
       - name: Cache Cargo
         uses: actions/cache@v4
         with:
@@ -30,9 +35,8 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          key: ${{ runner.os }}-cargo-v3-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-v3-
 
       - name: Cache Solana
         uses: actions/cache@v4
@@ -83,6 +87,7 @@ jobs:
 
       - name: Sync Keys and Build
         run: |
+          rm -f Cargo.lock
           anchor keys sync
           anchor build
 
