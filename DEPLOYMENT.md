@@ -81,16 +81,16 @@ solana address -k target/deploy/agentmemory-keypair.json
 Edit `Anchor.toml`:
 ```toml
 [programs.devnet]
-agentmemory = "YOUR_PROGRAM_ID_HERE"
+agentmemory = "EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc"
 
 [programs.mainnet]
-agentmemory = "YOUR_PROGRAM_ID_HERE"
+agentmemory = "EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc"
 ```
 
 ### Step 4: Update lib.rs
 Edit `programs/agentmemory/src/lib.rs`:
 ```rust
-declare_id!("YOUR_PROGRAM_ID_HERE");
+declare_id!("EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc");
 ```
 
 ### Step 5: Rebuild
@@ -108,14 +108,14 @@ anchor deploy --provider.cluster devnet
 Deploying cluster: https://api.devnet.solana.com
 Upgrade authority: YOUR_WALLET_ADDRESS
 Deploying program "agentmemory"...
-Program Id: YOUR_PROGRAM_ID
+Program Id: EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc
 
 Deploy success
 ```
 
 ### Step 7: Verify Deployment
 ```bash
-solana program show YOUR_PROGRAM_ID --url devnet
+solana program show EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc --url devnet
 ```
 
 ## 🧪 Testing
@@ -136,7 +136,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { TrustLayer } from './sdk';
 
 const connection = new Connection('https://api.devnet.solana.com');
-const programId = new PublicKey('YOUR_PROGRAM_ID');
+const programId = new PublicKey('EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc');
 
 const trustLayer = await TrustLayer.init(connection, wallet, programId);
 
@@ -169,7 +169,7 @@ console.log("Reputation:", rep);
 
 ### Check Program Logs
 ```bash
-solana logs YOUR_PROGRAM_ID --url devnet
+solana logs EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc --url devnet
 ```
 
 ### Check Account Data
@@ -209,7 +209,7 @@ solana config set --keypair ~/.config/solana/mainnet-keypair.json
 anchor deploy --provider.cluster mainnet
 
 # 4. Verify
-solana program show YOUR_PROGRAM_ID --url mainnet
+solana program show EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc --url mainnet
 ```
 
 ### Post-Deployment
@@ -224,7 +224,7 @@ solana program show YOUR_PROGRAM_ID --url mainnet
 ### Program Authority
 ```bash
 # Use multisig for upgrade authority
-solana program set-upgrade-authority YOUR_PROGRAM_ID \
+solana program set-upgrade-authority EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc \
   --new-upgrade-authority MULTISIG_ADDRESS
 ```
 
@@ -286,7 +286,7 @@ anchor deploy --provider.cluster devnet -- --compute-unit-limit 200000
 ```bash
 # Upgrade existing program
 anchor upgrade target/deploy/agentmemory.so \
-  --program-id YOUR_PROGRAM_ID \
+  --program-id EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc \
   --provider.cluster devnet
 ```
 

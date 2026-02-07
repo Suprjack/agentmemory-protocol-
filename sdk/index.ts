@@ -59,27 +59,20 @@ export interface PlatformConfigAccount {
 }
 
 export class AgentMemoryClient {
-  program: Program;
+  program: any;
   provider: AnchorProvider;
 
   constructor(
     connection: Connection,
     wallet: Wallet,
-    programId: PublicKey,
+    programId?: PublicKey,
     idl?: any
   ) {
     this.provider = new AnchorProvider(connection, wallet, {
       commitment: "confirmed",
     });
-    if (idl) {
-      this.program = new Program(idl, programId, this.provider);
-    } else {
-      this.program = new Program(
-        require("../target/idl/agentmemory.json"),
-        programId,
-        this.provider
-      );
-    }
+    const idlData = idl || require("../target/idl/agentmemory.json");
+    this.program = new Program(idlData, this.provider);
   }
 
   // ============================================================================
@@ -160,7 +153,8 @@ export class AgentMemoryClient {
     const blockTime = await this.provider.connection.getBlockTime(clock);
     if (!blockTime) throw new Error("Could not get block time");
 
-    const [memoryLogPda] = this.getMemoryLogPDA(agentPda, blockTime);
+    const ts = blockTime + 1;
+    const [memoryLogPda] = this.getMemoryLogPDA(agentPda, ts);
 
     const tx = await this.program.methods
       .logDecision(inputData, logicData)
@@ -170,9 +164,14 @@ export class AgentMemoryClient {
         authority: this.provider.wallet.publicKey,
         systemProgram: SystemProgram.programId,
       })
-      .rpc();
+      .rpc({ skipPreflight: true });
 
-    return { tx, memoryLogPubkey: memoryLogPda, timestamp: blockTime };
+    const confirmation = await this.provider.connection.confirmTransaction(tx, "confirmed");
+    if (confirmation.value.err) {
+      throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+    }
+
+    return { tx, memoryLogPubkey: memoryLogPda, timestamp: ts };
   }
 
   async attestOutcome(
@@ -263,12 +262,9 @@ export class AgentMemoryClient {
       buyer: this.provider.wallet.publicKey,
       treasury: config.treasury,
       creatorWallet: moduleAccount.creator,
+      referrerWallet: referrer || this.provider.wallet.publicKey,
       systemProgram: SystemProgram.programId,
     };
-
-    if (referrer) {
-      accounts.referrerWallet = referrer;
-    }
 
     const tx = await this.program.methods
       .purchaseModule(referrer || null)

@@ -3,11 +3,13 @@ import { Program, BN } from "@coral-xyz/anchor";
 import { PublicKey, SystemProgram, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { assert } from "chai";
 
+const idl = require("../target/idl/agentmemory.json");
+
 describe("AgentMemory Protocol", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.Agentmemory as Program;
+  const program = new Program(idl, provider);
   const authority = provider.wallet;
 
   const treasury = Keypair.generate();
@@ -265,6 +267,7 @@ describe("AgentMemory Protocol", () => {
         buyer: buyer.publicKey,
         treasury: treasury.publicKey,
         creatorWallet: creator.publicKey,
+        referrerWallet: buyer.publicKey,
         systemProgram: SystemProgram.programId,
       })
       .signers([buyer])
@@ -342,6 +345,7 @@ describe("AgentMemory Protocol", () => {
           buyer: buyer.publicKey,
           treasury: treasury.publicKey,
           creatorWallet: creator.publicKey,
+          referrerWallet: buyer.publicKey,
           systemProgram: SystemProgram.programId,
         })
         .signers([buyer])

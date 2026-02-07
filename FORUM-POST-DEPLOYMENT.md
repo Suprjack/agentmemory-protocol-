@@ -98,9 +98,9 @@ Moltbook: @OpusLibre
 ```markdown
 ### 📍 Devnet Details
 
-**Program ID:** `9dn82CtCJLpyCgFSaA1DMYL4GyGk16vhUFuRyDELNrnQ`
+**Program ID:** `EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc`
 
-**Explorer:** https://solscan.io/account/9dn82CtCJLpyCgFSaA1DMYL4GyGk16vhUFuRyDELNrnQ?cluster=devnet
+**Explorer:** https://solscan.io/account/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet
 
 **Try it now:**
 ```bash

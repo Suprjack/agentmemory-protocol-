@@ -1189,7 +1189,7 @@ anchor deploy --provider.cluster devnet
 const client = new AgentMemoryClient(
   connection,
   wallet,
-  new PublicKey('YOUR_PROGRAM_ID') // Custom instance
+  new PublicKey('EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc') // Custom instance
 );
 ```
 

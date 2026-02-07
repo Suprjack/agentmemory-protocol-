@@ -1,5 +1,5 @@
 [toolchain]
-anchor_version = "0.31.0"
+anchor_version = "0.30.1"
 solana_version = "1.18.18"
 
 [features]
@@ -7,13 +7,13 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-agentmemory = "9dn82CtCJLpyCgFSaA1DMYL4GyGk16vhUFuRyDELNrnQ"
+agentmemory = "EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc"
 
 [programs.devnet]
-agentmemory = "9dn82CtCJLpyCgFSaA1DMYL4GyGk16vhUFuRyDELNrnQ"
+agentmemory = "EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc"
 
 [programs.mainnet]
-agentmemory = "9dn82CtCJLpyCgFSaA1DMYL4GyGk16vhUFuRyDELNrnQ"
+agentmemory = "EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc"
 
 [registry]
 url = "https://api.apr.dev"

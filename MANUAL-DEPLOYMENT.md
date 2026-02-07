@@ -144,7 +144,7 @@ declare_id!("AgMemXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
 
 Replace with:
 ```rust
-declare_id!("YOUR_ACTUAL_PROGRAM_ID_HERE");
+declare_id!("EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc");
 ```
 
 **Edit `Anchor.toml`:**
@@ -158,7 +158,7 @@ agent_memory = "AgMemXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 Replace with:
 ```toml
 [programs.devnet]
-agent_memory = "YOUR_ACTUAL_PROGRAM_ID_HERE"
+agent_memory = "EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc"
 ```
 
 **Rebuild:**

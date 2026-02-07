@@ -28,19 +28,7 @@ function createClient(
   const connection = new Connection(rpc || DEFAULT_RPC, "confirmed");
   const kp = loadKeypair(keypairPath);
   const wallet = new Wallet(kp);
-
-  const pid = programId
-    ? new PublicKey(programId)
-    : new PublicKey(
-        JSON.parse(
-          fs.readFileSync(
-            `${__dirname}/../target/idl/agentmemory.json`,
-            "utf-8"
-          )
-        ).metadata?.address || "11111111111111111111111111111111"
-      );
-
-  return new AgentMemoryClient(connection, wallet, pid);
+  return new AgentMemoryClient(connection, wallet);
 }
 
 cli

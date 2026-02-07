@@ -252,7 +252,7 @@ async function main() {
   // Setup
   const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
   const wallet = new Wallet(Keypair.generate());
-  const programId = new PublicKey('YOUR_PROGRAM_ID'); // Replace with deployed program ID
+  const programId = new PublicKey('EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc'); // Replace with deployed program ID
 
   // Airdrop for testing
   const airdropSig = await connection.requestAirdrop(
