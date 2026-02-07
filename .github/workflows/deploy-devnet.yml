@@ -70,16 +70,16 @@ jobs:
           solana config set --url devnet
           echo "Wallet: $(solana address)"
 
-      - name: Check Balance
+      - name: Fund Wallet (Devnet Airdrop)
         run: |
-          BALANCE=$(solana balance --lamports | awk '{print $1}')
-          MIN_BALANCE=50000000  # 0.05 SOL in lamports
-          if [ "$BALANCE" -lt "$MIN_BALANCE" ]; then
-            echo "❌ Insufficient balance: $BALANCE lamports (minimum 50000000)"
-            echo "Please fund wallet: $(solana address)"
-            exit 1
-          fi
-          echo "✅ Balance OK: $(solana balance)"
+          echo "Requesting devnet airdrop..."
+          for i in 1 2 3; do
+            solana airdrop 2 --url devnet && break
+            echo "Airdrop attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          sleep 5
+          echo "✅ Balance: $(solana balance)"
 
       - name: Sync Keys and Build
         run: |
