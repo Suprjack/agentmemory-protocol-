@@ -23,6 +23,12 @@ jobs:
           solana-cli-version: '1.18.18'
           node-version: '20.16.0'
 
+      - name: Setup PATH
+        run: |
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          echo "$HOME/.avm/bin" >> $GITHUB_PATH
+
       - name: Verify Installation
         run: |
           echo "Anchor: $(anchor --version)"
@@ -33,19 +39,12 @@ jobs:
         env:
           SOLANA_KEYPAIR_DEVNET: ${{ secrets.SOLANA_KEYPAIR_DEVNET }}
         run: |
-          echo "Debug: checking if secret exists..."
-          if [ -z "$SOLANA_KEYPAIR_DEVNET" ]; then
-            echo "ERROR: SOLANA_KEYPAIR_DEVNET secret is empty!"
-            exit 1
-          fi
-          echo "Secret length: ${#SOLANA_KEYPAIR_DEVNET} chars"
           solana config set --url devnet
           mkdir -p ~/.config/solana
           echo "$SOLANA_KEYPAIR_DEVNET" | base64 -d > ~/.config/solana/id.json
           chmod 600 ~/.config/solana/id.json
-          echo "Keypair file size: $(wc -c < ~/.config/solana/id.json) bytes"
           echo "Wallet: $(solana address)"
-          solana balance || echo "Balance check failed (normal if new wallet)"
+          solana balance || echo "No balance yet"
 
       - name: Build Program
         run: anchor build
