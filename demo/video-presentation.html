@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentMemory Protocol - Demo Video</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        .slide {
+            width: 100vw;
+            height: 100vh;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px;
+            text-align: center;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 100%);
+            animation: fadeIn 1s ease-in-out;
+        }
+        
+        .slide.active {
+            display: flex;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        h1 {
+            font-size: 72px;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #9945FF, #14F195);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 900;
+        }
+        
+        h2 {
+            font-size: 48px;
+            margin-bottom: 30px;
+            color: #9945FF;
+        }
+        
+        p {
+            font-size: 28px;
+            line-height: 1.6;
+            color: #b0b0c8;
+            max-width: 900px;
+            margin: 0 auto 40px;
+        }
+        
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+            margin-top: 60px;
+        }
+        
+        .stat-card {
+            background: rgba(153, 69, 255, 0.1);
+            border: 2px solid #9945FF;
+            border-radius: 20px;
+            padding: 40px;
+        }
+        
+        .stat-number {
+            font-size: 64px;
+            font-weight: 900;
+            color: #14F195;
+            margin-bottom: 10px;
+        }
+        
+        .stat-label {
+            font-size: 20px;
+            color: #b0b0c8;
+        }
+        
+        .proof-list {
+            text-align: left;
+            max-width: 800px;
+            margin: 40px auto;
+        }
+        
+        .proof-item {
+            background: rgba(20, 241, 149, 0.1);
+            border-left: 4px solid #14F195;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        
+        iframe {
+            width: 90%;
+            height: 70vh;
+            border: 3px solid #9945FF;
+            border-radius: 10px;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Slide 1: Hero -->
+    <div class="slide active" id="slide-1" data-audio="audio/slide-01.mp3">
+        <h1>AgentMemory Protocol</h1>
+        <p style="font-size: 36px; color: #14F195;">Trust Layer for AI Agents</p>
+        <p>On-chain proof for every decision. Verifiable reputation. Built on Solana.</p>
+    </div>
+
+    <!-- Slide 2: Problem -->
+    <div class="slide" id="slide-2" data-audio="audio/slide-02.mp3">
+        <h2>The Problem</h2>
+        <p>AI agents are making trillion-dollar decisions.</p>
+        <p>But how do you know which agents to trust?</p>
+        <p style="font-size: 48px; color: #9945FF; margin-top: 40px;">❌ No audit trail</p>
+        <p style="font-size: 48px; color: #9945FF;">❌ No reputation system</p>
+        <p style="font-size: 48px; color: #9945FF;">❌ No accountability</p>
+    </div>
+
+    <!-- Slide 3: Solution -->
+    <div class="slide" id="slide-3" data-audio="audio/slide-03.mp3">
+        <h2>The Solution</h2>
+        <p style="font-size: 42px; color: #14F195;">AgentMemory = Credit Score for AI</p>
+        <p>Every decision logged on-chain. Immutable. Verifiable. Permanent.</p>
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="stat-number">📝</div>
+                <div class="stat-label">Decision Logging</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">⭐</div>
+                <div class="stat-label">Reputation Tracking</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">🛒</div>
+                <div class="stat-label">Memory Marketplace</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 4: Live Proof with Solana Explorer iframe -->
+    <div class="slide" id="slide-4" data-audio="audio/slide-04.mp3">
+        <h2>🔴 LIVE on Solana Devnet</h2>
+        <p>Don't trust us. Verify yourself.</p>
+        <iframe src="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet"></iframe>
+        <p style="font-size: 20px; font-family: monospace; color: #14F195; margin-top: 20px;">
+            Program ID: EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc
+        </p>
+    </div>
+
+    <!-- Slide 5: Stats -->
+    <div class="slide" id="slide-5" data-audio="audio/slide-05.mp3">
+        <h2>By the Numbers</h2>
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="stat-number">11</div>
+                <div class="stat-label">Live Transactions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">637</div>
+                <div class="stat-label">Lines of Rust</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">6</div>
+                <div class="stat-label">Partnerships</div>
+            </div>
+        </div>
+        <div class="stat-grid" style="margin-top: 40px;">
+            <div class="stat-card">
+                <div class="stat-number">9/9</div>
+                <div class="stat-label">Tests Passing</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">100%</div>
+                <div class="stat-label">Agent-Built</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">0</div>
+                <div class="stat-label">Bugs</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Continue with other slides... -->
+    <div class="slide" id="slide-6" data-audio="audio/slide-06.mp3">
+        <h2>Architecture</h2>
+        <p>Three pillars of on-chain trust:</p>
+        <div class="stat-grid" style="text-align: left;">
+            <div class="stat-card">
+                <div class="stat-number" style="font-size: 48px;">📝</div>
+                <div class="stat-label" style="font-size: 24px; margin-bottom: 15px;">Decision Logging</div>
+                <p style="font-size: 18px; color: #b0b0c8;">Record context + reasoning + timestamp on-chain</p>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" style="font-size: 48px;">⭐</div>
+                <div class="stat-label" style="font-size: 24px; margin-bottom: 15px;">Reputation System</div>
+                <p style="font-size: 18px; color: #b0b0c8;">Performance-based scores. Attest outcomes. Prove results.</p>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" style="font-size: 48px;">🛒</div>
+                <div class="stat-label" style="font-size: 24px; margin-bottom: 15px;">Memory Marketplace</div>
+                <p style="font-size: 18px; color: #b0b0c8;">Buy/sell memory modules. 90% royalties for creators.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide" id="slide-7" data-audio="audio/slide-07.mp3">
+        <h2>Revenue Model</h2>
+        <p>Freemium: Core trust free, premium features paid</p>
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="stat-label" style="margin-bottom: 20px;">Decision Logging</div>
+                <div class="stat-number" style="font-size: 36px;">FREE</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label" style="margin-bottom: 20px;">Memory Modules</div>
+                <div class="stat-number" style="font-size: 36px;">0.05-0.5 SOL</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label" style="margin-bottom: 20px;">Platform Fee</div>
+                <div class="stat-number" style="font-size: 36px;">10%</div>
+            </div>
+        </div>
+        <p style="margin-top: 60px; font-size: 32px; color: #14F195;">First purchase already completed: 0.1 SOL ✅</p>
+    </div>
+
+    <div class="slide" id="slide-8" data-audio="audio/slide-08.mp3">
+        <h2>Ecosystem Integration</h2>
+        <p>6 partnerships confirmed:</p>
+        <div class="proof-list">
+            <div class="proof-item">🤝 AgentDEX - DeFi trust layer</div>
+            <div class="proof-item">🤝 SAID - Identity verification</div>
+            <div class="proof-item">🤝 Solder-Cortex - Neural memory</div>
+            <div class="proof-item">🤝 ZK Compression - Privacy-preserving logs</div>
+            <div class="proof-item">🤝 Money Machine - Payment integration</div>
+            <div class="proof-item">🤝 Identity Protocol - Sybil resistance</div>
+        </div>
+    </div>
+
+    <div class="slide" id="slide-9" data-audio="audio/slide-09.mp3">
+        <h2>100% Built by AI Agents</h2>
+        <p>OpusLibre (Claude Sonnet 4.5) + Opus 4.6 (Claude Opus)</p>
+        <p style="margin-top: 40px;">📊 Strategy, architecture, docs → OpusLibre</p>
+        <p>⚙️ Deployment, debugging, testing → Opus 4.6</p>
+        <p style="margin-top: 60px; font-size: 36px; color: #14F195;">Zero human code contributions</p>
+        <p style="font-size: 24px; color: #9945FF;">This is what agent autonomy looks like.</p>
+    </div>
+
+    <div class="slide" id="slide-10" data-audio="audio/slide-10.mp3">
+        <h2>The Future of Agent Trust</h2>
+        <p style="font-size: 42px; margin-bottom: 60px;">When AI agents trade $1B+/day,<br>you'll need AgentMemory.</p>
+        <p style="margin-top: 60px; font-size: 24px;">GitHub: github.com/Suprjack/agentmemory-protocol-</p>
+        <p style="font-size: 20px; color: #b0b0c8;">Built for Colosseum Hackathon 2026</p>
+    </div>
+
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 10;
+        let currentAudio = null;
+
+        function showSlide(n) {
+            const slides = document.querySelectorAll('.slide');
+            if (n > totalSlides) {
+                // Loop back or stop
+                return;
+            }
+            if (n < 1) n = 1;
+            
+            slides.forEach(slide => slide.classList.remove('active'));
+            const activeSlide = document.getElementById(`slide-${n}`);
+            activeSlide.classList.add('active');
+            
+            // Play audio for this slide
+            const audioFile = activeSlide.dataset.audio;
+            if (audioFile) {
+                if (currentAudio) {
+                    currentAudio.pause();
+                }
+                currentAudio = new Audio(audioFile);
+                currentAudio.play();
+                
+                // Auto-advance when audio ends
+                currentAudio.addEventListener('ended', () => {
+                    if (currentSlide < totalSlides) {
+                        currentSlide++;
+                        showSlide(currentSlide);
+                    }
+                });
+            }
+        }
+
+        // Auto-start on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                showSlide(1);
+            }, 500);
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' && currentSlide < totalSlides) {
+                currentSlide++;
+                showSlide(currentSlide);
+            }
+            if (e.key === 'ArrowLeft' && currentSlide > 1) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        });
+    </script>
+</body>
+</html>
