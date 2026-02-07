@@ -43,8 +43,8 @@
 - [x] Examples README (6 examples documented)
 - [x] Demo script (5min pitch)
 - [ ] Demo video recorded
-- [ ] API documentation (SDK)
-- [ ] FAQ page
+- [x] API documentation (SDK)
+- [x] FAQ page
 
 ### Marketing Assets
 - [x] Landing page (HTML/CSS/JS)
