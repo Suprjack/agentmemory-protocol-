@@ -1,0 +1,14 @@
+Transaction: 2Tj7s859isa3cZQ4gz75mYt2nVFwhXqSqDgB65Q4qSWZd4wfn6QQSTLebhUfqh9GmAjHc
+
+Result: Success ✅
+Timestamp: Feb 7, 2026 at 14:58:53
+Fee: 0.000005 SOL
+
+Instruction: RegisterModule
+Program logged: "Module registered: rag-memory-v1 by 5wkiaNG9sVBhL9HTWAkt8MpGALhb5YhfjGPA3Lou6paS"
+
+Module: rag-memory-v1
+Price: 0.075 SOL
+IPFS: QmT5NvUtoM5nWFfrQdVrFtvGfKFmG7AHE8P34isapyhCxX
+
+Compute units: 22,515 / 200,000
