@@ -32,7 +32,7 @@
 - [x] Money Machine example (200 LOC)
 - [x] Identity integration (150 LOC)
 - [x] Solder-Cortex integration (330 LOC)
-- [ ] AutoVault example (optional)
+- [x] AutoVault example (322 LOC, compliance-focused)
 - [ ] Partner announcements coordinated
 
 ### Documentation

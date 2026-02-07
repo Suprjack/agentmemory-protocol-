@@ -1,243 +1,285 @@
 #!/usr/bin/env node
 
-/**
- * AgentMemory CLI - Command-line tool for interacting with AgentMemory Protocol
- * 
- * Usage:
- *   agentmemory init <fee_pct> <royalty_pct> <fee_collector>
- *   agentmemory register <id> <name> <desc> <price> <ipfs_hash> <category>
- *   agentmemory purchase <module_id>
- *   agentmemory list
- *   agentmemory get <module_id>
- *   agentmemory download <module_id>
- */
+import { Command } from "commander";
+import { Connection, Keypair, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { Wallet } from "@coral-xyz/anchor";
+import { AgentMemoryClient } from "../sdk/index";
+import * as fs from "fs";
+import * as os from "os";
 
-import { Command } from 'commander';
-import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-import { AgentMemoryClient, ModuleCategory } from '../sdk/index';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
+const cli = new Command();
 
-const program = new Command();
+const DEFAULT_RPC =
+  process.env.SOLANA_RPC || "https://api.devnet.solana.com";
+const DEFAULT_KEYPAIR =
+  process.env.SOLANA_KEYPAIR || `${os.homedir()}/.config/solana/id.json`;
 
-// Configuration
-const DEFAULT_RPC = process.env.SOLANA_RPC || 'https://api.devnet.solana.com';
-const DEFAULT_KEYPAIR = process.env.SOLANA_KEYPAIR || `${os.homedir()}/.config/solana/id.json`;
-
-// Helper: Load wallet
-function loadWallet(keypairPath?: string): Keypair {
-  const path = keypairPath || DEFAULT_KEYPAIR;
-  const secretKey = JSON.parse(fs.readFileSync(path, 'utf-8'));
+function loadKeypair(keypairPath?: string): Keypair {
+  const p = keypairPath || DEFAULT_KEYPAIR;
+  const secretKey = JSON.parse(fs.readFileSync(p, "utf-8"));
   return Keypair.fromSecretKey(Uint8Array.from(secretKey));
 }
 
-// Helper: Create client
-function createClient(rpc?: string, keypairPath?: string): AgentMemoryClient {
-  const connection = new Connection(rpc || DEFAULT_RPC);
-  const wallet = loadWallet(keypairPath);
-  return new AgentMemoryClient(connection, { publicKey: wallet.publicKey, signTransaction: async (tx) => tx, signAllTransactions: async (txs) => txs });
+function createClient(
+  rpc?: string,
+  keypairPath?: string,
+  programId?: string
+): AgentMemoryClient {
+  const connection = new Connection(rpc || DEFAULT_RPC, "confirmed");
+  const kp = loadKeypair(keypairPath);
+  const wallet = new Wallet(kp);
+
+  const pid = programId
+    ? new PublicKey(programId)
+    : new PublicKey(
+        JSON.parse(
+          fs.readFileSync(
+            `${__dirname}/../target/idl/agentmemory.json`,
+            "utf-8"
+          )
+        ).metadata?.address || "11111111111111111111111111111111"
+      );
+
+  return new AgentMemoryClient(connection, wallet, pid);
 }
 
-// Command: Initialize platform
-program
-  .command('init')
-  .description('Initialize AgentMemory platform (admin only)')
-  .argument('<fee_pct>', 'Platform fee percentage (e.g., 5)')
-  .argument('<royalty_pct>', 'Royalty percentage (e.g., 10)')
-  .argument('<fee_collector>', 'Fee collector wallet address')
-  .option('-r, --rpc <url>', 'RPC endpoint', DEFAULT_RPC)
-  .option('-k, --keypair <path>', 'Keypair path', DEFAULT_KEYPAIR)
-  .action(async (feePct, royaltyPct, feeCollector, options) => {
+cli
+  .name("agentmemory")
+  .description("CLI for AgentMemory Protocol on Solana")
+  .version("2.0.0")
+  .option("-r, --rpc <url>", "RPC endpoint", DEFAULT_RPC)
+  .option("-k, --keypair <path>", "Keypair file path", DEFAULT_KEYPAIR)
+  .option("-p, --program-id <address>", "Program ID override");
+
+cli
+  .command("init-platform")
+  .description("Initialize platform config (admin, one-time)")
+  .argument("<treasury>", "Treasury wallet address")
+  .argument("<platform_fee_bps>", "Platform fee in basis points (e.g. 500 = 5%)")
+  .argument("<referral_fee_bps>", "Referral fee in basis points (e.g. 500 = 5%)")
+  .action(async (treasury, platformFeeBps, referralFeeBps) => {
     try {
-      const client = createClient(options.rpc, options.keypair);
-      const feeCollectorPubkey = new PublicKey(feeCollector);
-      
-      console.log('🚀 Initializing AgentMemory platform...');
-      console.log(`   Fee: ${feePct}%`);
-      console.log(`   Royalty: ${royaltyPct}%`);
-      console.log(`   Fee Collector: ${feeCollector}`);
-      
-      const tx = await client.initialize(
-        parseInt(feePct),
-        parseInt(royaltyPct),
-        feeCollectorPubkey
+      const opts = cli.opts();
+      const client = createClient(opts.rpc, opts.keypair, opts.programId);
+      const treasuryPk = new PublicKey(treasury);
+
+      console.log("Initializing platform...");
+      console.log(`  Treasury: ${treasury}`);
+      console.log(`  Platform fee: ${platformFeeBps} bps`);
+      console.log(`  Referral fee: ${referralFeeBps} bps`);
+
+      const tx = await client.initializePlatform(
+        treasuryPk,
+        parseInt(platformFeeBps),
+        parseInt(referralFeeBps)
       );
-      
-      console.log(`✅ Initialized! Tx: ${tx}`);
-    } catch (error) {
-      console.error('❌ Error:', error.message);
+
+      console.log(`Done. Tx: ${tx}`);
+      console.log(
+        `Explorer: https://explorer.solana.com/tx/${tx}?cluster=devnet`
+      );
+    } catch (error: any) {
+      console.error("Error:", error.message);
       process.exit(1);
     }
   });
 
-// Command: Register module
-program
-  .command('register')
-  .description('Register a new memory module')
-  .argument('<id>', 'Module ID (e.g., bitemporal-v1)')
-  .argument('<name>', 'Module name')
-  .argument('<description>', 'Module description')
-  .argument('<price_sol>', 'Price in SOL (e.g., 0.1)')
-  .argument('<ipfs_hash>', 'IPFS hash (Qm... or bafy...)')
-  .argument('<category>', 'Category: BiTemporal|Procedural|Semantic|Episodic|Custom')
-  .option('-r, --rpc <url>', 'RPC endpoint', DEFAULT_RPC)
-  .option('-k, --keypair <path>', 'Keypair path', DEFAULT_KEYPAIR)
-  .action(async (id, name, description, priceSol, ipfsHash, category, options) => {
+cli
+  .command("init-agent")
+  .description("Initialize an agent account")
+  .argument("<agent_id>", "Agent identifier (max 64 chars)")
+  .action(async (agentId) => {
     try {
-      const client = createClient(options.rpc, options.keypair);
-      
-      if (!Object.values(ModuleCategory).includes(category as ModuleCategory)) {
-        throw new Error(`Invalid category. Must be one of: ${Object.values(ModuleCategory).join(', ')}`);
-      }
-      
-      console.log('📦 Registering module...');
-      console.log(`   ID: ${id}`);
-      console.log(`   Name: ${name}`);
-      console.log(`   Price: ${priceSol} SOL`);
-      console.log(`   IPFS: ${ipfsHash}`);
-      console.log(`   Category: ${category}`);
-      
+      const opts = cli.opts();
+      const client = createClient(opts.rpc, opts.keypair, opts.programId);
+
+      console.log(`Initializing agent: ${agentId}`);
+      const tx = await client.initializeAgent(agentId);
+
+      console.log(`Done. Tx: ${tx}`);
+      console.log(
+        `Explorer: https://explorer.solana.com/tx/${tx}?cluster=devnet`
+      );
+    } catch (error: any) {
+      console.error("Error:", error.message);
+      process.exit(1);
+    }
+  });
+
+cli
+  .command("log")
+  .description("Log an agent decision on-chain")
+  .argument("<agent_id>", "Agent identifier")
+  .argument("<input_data>", "Input context (max 256 chars)")
+  .argument("<logic_data>", "Decision logic (max 256 chars)")
+  .action(async (agentId, inputData, logicData) => {
+    try {
+      const opts = cli.opts();
+      const client = createClient(opts.rpc, opts.keypair, opts.programId);
+
+      console.log(`Logging decision for agent: ${agentId}`);
+      console.log(`  Input: ${inputData}`);
+      console.log(`  Logic: ${logicData}`);
+
+      const result = await client.logDecision(agentId, inputData, logicData);
+
+      console.log(`Done. Tx: ${result.tx}`);
+      console.log(`Memory log: ${result.memoryLogPubkey.toBase58()}`);
+      console.log(
+        `Explorer: https://explorer.solana.com/tx/${result.tx}?cluster=devnet`
+      );
+    } catch (error: any) {
+      console.error("Error:", error.message);
+      process.exit(1);
+    }
+  });
+
+cli
+  .command("attest")
+  .description("Attest outcome of a logged decision")
+  .argument("<agent_id>", "Agent identifier")
+  .argument("<memory_log>", "Memory log account address")
+  .argument("<outcome_data>", "Outcome description (max 256 chars)")
+  .argument("<success>", "Was outcome successful? (true/false)")
+  .argument("<score_delta>", "Reputation score change (integer)")
+  .action(async (agentId, memoryLog, outcomeData, success, scoreDelta) => {
+    try {
+      const opts = cli.opts();
+      const client = createClient(opts.rpc, opts.keypair, opts.programId);
+      const memoryLogPk = new PublicKey(memoryLog);
+      const isSuccess = success === "true";
+
+      console.log(`Attesting outcome for agent: ${agentId}`);
+      console.log(`  Memory log: ${memoryLog}`);
+      console.log(`  Success: ${isSuccess}`);
+      console.log(`  Score delta: ${scoreDelta}`);
+
+      const tx = await client.attestOutcome(
+        agentId,
+        memoryLogPk,
+        outcomeData,
+        isSuccess,
+        parseInt(scoreDelta)
+      );
+
+      console.log(`Done. Tx: ${tx}`);
+      console.log(
+        `Explorer: https://explorer.solana.com/tx/${tx}?cluster=devnet`
+      );
+    } catch (error: any) {
+      console.error("Error:", error.message);
+      process.exit(1);
+    }
+  });
+
+cli
+  .command("register")
+  .description("Register a memory module for sale")
+  .argument("<module_id>", "Module identifier (max 64 chars)")
+  .argument("<price_lamports>", "Price in lamports (min 1000000)")
+  .argument("<royalty_bps>", "Royalty in basis points (max 10000)")
+  .argument("<ipfs_hash>", "IPFS content hash (Qm... or bafy...)")
+  .action(async (moduleId, priceLamports, royaltyBps, ipfsHash) => {
+    try {
+      const opts = cli.opts();
+      const client = createClient(opts.rpc, opts.keypair, opts.programId);
+
+      console.log(`Registering module: ${moduleId}`);
+      console.log(`  Price: ${priceLamports} lamports (${parseInt(priceLamports) / LAMPORTS_PER_SOL} SOL)`);
+      console.log(`  Royalty: ${royaltyBps} bps`);
+      console.log(`  IPFS: ${ipfsHash}`);
+
       const tx = await client.registerModule(
-        id,
-        name,
-        description,
-        parseFloat(priceSol),
-        ipfsHash,
-        category as ModuleCategory
+        moduleId,
+        parseInt(priceLamports),
+        parseInt(royaltyBps),
+        ipfsHash
       );
-      
-      console.log(`✅ Registered! Tx: ${tx}`);
-      console.log(`🔗 View on Explorer: https://explorer.solana.com/tx/${tx}?cluster=devnet`);
-    } catch (error) {
-      console.error('❌ Error:', error.message);
+
+      console.log(`Done. Tx: ${tx}`);
+      console.log(
+        `Explorer: https://explorer.solana.com/tx/${tx}?cluster=devnet`
+      );
+    } catch (error: any) {
+      console.error("Error:", error.message);
       process.exit(1);
     }
   });
 
-// Command: Purchase module
-program
-  .command('purchase')
-  .description('Purchase a memory module')
-  .argument('<module_id>', 'Module ID to purchase')
-  .option('-r, --rpc <url>', 'RPC endpoint', DEFAULT_RPC)
-  .option('-k, --keypair <path>', 'Keypair path', DEFAULT_KEYPAIR)
-  .action(async (moduleId, options) => {
+cli
+  .command("purchase")
+  .description("Purchase a memory module")
+  .argument("<module_id>", "Module ID to purchase")
+  .argument("<agent_id>", "Your agent ID (must be initialized)")
+  .option("--referrer <address>", "Optional referrer wallet address")
+  .action(async (moduleId, agentId, options) => {
     try {
-      const client = createClient(options.rpc, options.keypair);
-      
-      console.log('💰 Purchasing module...');
-      console.log(`   Module: ${moduleId}`);
-      
-      // Get module info first
-      const module = await client.getModule(moduleId);
-      console.log(`   Price: ${module.price / 1e9} SOL`);
-      console.log(`   Creator: ${module.creator.toBase58()}`);
-      
-      const tx = await client.purchaseModule(moduleId);
-      
-      console.log(`✅ Purchased! Tx: ${tx}`);
-      console.log(`🔗 View on Explorer: https://explorer.solana.com/tx/${tx}?cluster=devnet`);
-      console.log(`📥 Download with: agentmemory download ${moduleId}`);
-    } catch (error) {
-      console.error('❌ Error:', error.message);
+      const opts = cli.opts();
+      const client = createClient(opts.rpc, opts.keypair, opts.programId);
+      const referrer = options.referrer
+        ? new PublicKey(options.referrer)
+        : undefined;
+
+      const mod = await client.getModule(moduleId);
+      console.log(`Purchasing module: ${moduleId}`);
+      console.log(`  Price: ${mod.priceLamports / LAMPORTS_PER_SOL} SOL`);
+      console.log(`  Creator: ${mod.creator.toBase58()}`);
+
+      const tx = await client.purchaseModule(moduleId, agentId, referrer);
+
+      console.log(`Done. Tx: ${tx}`);
+      console.log(
+        `Explorer: https://explorer.solana.com/tx/${tx}?cluster=devnet`
+      );
+    } catch (error: any) {
+      console.error("Error:", error.message);
       process.exit(1);
     }
   });
 
-// Command: Get module info
-program
-  .command('get')
-  .description('Get module information')
-  .argument('<module_id>', 'Module ID')
-  .option('-r, --rpc <url>', 'RPC endpoint', DEFAULT_RPC)
-  .option('-k, --keypair <path>', 'Keypair path', DEFAULT_KEYPAIR)
-  .action(async (moduleId, options) => {
+cli
+  .command("get-agent")
+  .description("Get agent account details")
+  .argument("<agent_id>", "Agent identifier")
+  .action(async (agentId) => {
     try {
-      const client = createClient(options.rpc, options.keypair);
-      
-      console.log('🔍 Fetching module info...');
-      const module = await client.getModule(moduleId);
-      
-      console.log(`\n📦 Module: ${module.name}`);
-      console.log(`   ID: ${module.moduleId}`);
-      console.log(`   Description: ${module.description}`);
-      console.log(`   Price: ${module.price / 1e9} SOL`);
-      console.log(`   Category: ${module.category}`);
-      console.log(`   Creator: ${module.creator.toBase58()}`);
-      console.log(`   IPFS: ${module.ipfsHash}`);
-      console.log(`   Created: ${new Date(module.createdAt * 1000).toISOString()}`);
-      console.log(`   Purchases: ${module.totalPurchases}`);
-      console.log(`   Revenue: ${module.totalRevenue / 1e9} SOL`);
-    } catch (error) {
-      console.error('❌ Error:', error.message);
+      const opts = cli.opts();
+      const client = createClient(opts.rpc, opts.keypair, opts.programId);
+      const agent = await client.getAgent(agentId);
+
+      console.log(`Agent: ${agent.agentId}`);
+      console.log(`  Authority: ${agent.authority.toBase58()}`);
+      console.log(`  Reputation: ${agent.reputation}`);
+      console.log(`  Total logs: ${agent.totalLogs}`);
+      console.log(`  Total attestations: ${agent.totalAttestations}`);
+    } catch (error: any) {
+      console.error("Error:", error.message);
       process.exit(1);
     }
   });
 
-// Command: Download module
-program
-  .command('download')
-  .description('Download module content from IPFS')
-  .argument('<module_id>', 'Module ID')
-  .option('-r, --rpc <url>', 'RPC endpoint', DEFAULT_RPC)
-  .option('-k, --keypair <path>', 'Keypair path', DEFAULT_KEYPAIR)
-  .option('-o, --output <path>', 'Output file path')
-  .action(async (moduleId, options) => {
+cli
+  .command("get-module")
+  .description("Get module metadata")
+  .argument("<module_id>", "Module identifier")
+  .action(async (moduleId) => {
     try {
-      const client = createClient(options.rpc, options.keypair);
-      
-      console.log('📥 Downloading module...');
-      const content = await client.downloadModule(moduleId);
-      
-      if (options.output) {
-        fs.writeFileSync(options.output, content);
-        console.log(`✅ Saved to: ${options.output}`);
-      } else {
-        console.log('\n' + '='.repeat(80));
-        console.log(content);
-        console.log('='.repeat(80));
-      }
-    } catch (error) {
-      console.error('❌ Error:', error.message);
+      const opts = cli.opts();
+      const client = createClient(opts.rpc, opts.keypair, opts.programId);
+      const mod = await client.getModule(moduleId);
+
+      console.log(`Module: ${mod.moduleId}`);
+      console.log(`  Creator: ${mod.creator.toBase58()}`);
+      console.log(`  Price: ${mod.priceLamports / LAMPORTS_PER_SOL} SOL (${mod.priceLamports} lamports)`);
+      console.log(`  Royalty: ${mod.royaltyBps} bps`);
+      console.log(`  IPFS: ${mod.ipfsHash}`);
+      console.log(`  Active: ${mod.isActive}`);
+      console.log(`  Sales: ${mod.totalSales}`);
+      console.log(`  Revenue: ${mod.totalRevenue / LAMPORTS_PER_SOL} SOL`);
+    } catch (error: any) {
+      console.error("Error:", error.message);
       process.exit(1);
     }
   });
 
-// Command: Check ownership
-program
-  .command('owns')
-  .description('Check if you own a module')
-  .argument('<module_id>', 'Module ID')
-  .option('-r, --rpc <url>', 'RPC endpoint', DEFAULT_RPC)
-  .option('-k, --keypair <path>', 'Keypair path', DEFAULT_KEYPAIR)
-  .action(async (moduleId, options) => {
-    try {
-      const client = createClient(options.rpc, options.keypair);
-      const wallet = loadWallet(options.keypair);
-      
-      const owns = await client.hasPurchased(wallet.publicKey, moduleId);
-      
-      if (owns) {
-        console.log(`✅ You own module: ${moduleId}`);
-        
-        const purchase = await client.getPurchase(wallet.publicKey, moduleId);
-        if (purchase) {
-          console.log(`   Purchased: ${new Date(purchase.purchasedAt * 1000).toISOString()}`);
-        }
-      } else {
-        console.log(`❌ You do not own module: ${moduleId}`);
-        console.log(`   Purchase with: agentmemory purchase ${moduleId}`);
-      }
-    } catch (error) {
-      console.error('❌ Error:', error.message);
-      process.exit(1);
-    }
-  });
-
-// Parse and execute
-program
-  .name('agentmemory')
-  .description('CLI tool for AgentMemory Protocol')
-  .version('2.0.0')
-  .parse(process.argv);
+cli.parse(process.argv);

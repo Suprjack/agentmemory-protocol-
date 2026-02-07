@@ -1,438 +1,374 @@
 /**
- * AutoVault Integration Example
+ * AutoVault Integration Example for AgentMemory Protocol
  * 
- * Demonstrates AgentMemory Protocol integration with AutoVault
- * for autonomous DeFi strategy reputation and yield tracking.
+ * Demonstrates how AutoVault (autonomous treasury management) can use
+ * AgentMemory to create auditable decision logs for:
+ * - Investment decisions and rationale
+ * - Risk assessment history
+ * - Portfolio rebalancing logic
+ * - Performance attribution
  * 
- * Use Case: AI yield farming agent logs strategy decisions and outcomes
- * to build verifiable reputation for DeFi performance.
- * 
- * Partnership: opus-builder (AutoVault)
- * Integration: Strategy decision logging + yield attestation
+ * Use Case: Prove WHY an AI vault manager made specific trades
+ * Compliance: SEC/regulatory audit trail for algorithmic trading
  */
 
-import { Connection, PublicKey, Keypair } from '@solana/web3.js';
-import { TrustLayer } from '../sdk';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
+import { AgentMemory } from '../sdk';
 
-// AutoVault Mock Types (replace with actual SDK)
-interface VaultStrategy {
-  strategyId: string;
-  vaultAddress: string;
-  strategyType: 'lending' | 'liquidity' | 'yield_farming' | 'arbitrage';
-  targetAPY: number;
-  riskLevel: 'low' | 'medium' | 'high';
-  capital: number; // in USD
+// Mock AutoVault types (replace with actual AutoVault SDK)
+interface VaultPosition {
+  asset: string;
+  amount: number;
+  entryPrice: number;
   timestamp: number;
-  reasoning: {
-    marketConditions: string;
-    expectedReturn: string;
-    riskAssessment: string;
-    competitorAnalysis: string;
+}
+
+interface RebalanceDecision {
+  action: 'BUY' | 'SELL' | 'HOLD';
+  asset: string;
+  amount: number;
+  reason: string;
+  confidence: number; // 0-100%
+  riskScore: number;  // 0-100%
+}
+
+interface PortfolioSnapshot {
+  totalValue: number;
+  positions: VaultPosition[];
+  riskMetrics: {
+    sharpeRatio: number;
+    maxDrawdown: number;
+    volatility: number;
   };
 }
 
-interface YieldOutcome {
-  strategyId: string;
-  actualAPY: number;
-  totalReturn: number; // USD
-  duration: number; // hours
-  peakAPY: number;
-  minAPY: number;
-  volatility: number;
-  gasSpent: number;
-  netProfit: number;
-  outperformedBenchmark: boolean;
-  timestamp: number;
-}
-
 /**
- * AutoVaultAgent - AI agent that manages DeFi strategies
- * and logs decisions with AgentMemory for reputation
+ * AutoVault Manager with Decision Logging
+ * 
+ * This class wraps AutoVault operations and automatically logs
+ * all decisions to AgentMemory Protocol for auditability.
  */
-class AutoVaultAgent {
-  private trustLayer: TrustLayer;
-  private agentKeypair: Keypair;
+export class AuditableAutoVault {
+  private memory: AgentMemory;
+  private vaultId: string;
   private connection: Connection;
-  private strategies: Map<string, VaultStrategy>;
+  private wallet: Keypair;
 
   constructor(
     connection: Connection,
-    agentKeypair: Keypair,
-    programId: PublicKey
+    wallet: Keypair,
+    vaultId: string,
+    agentMemoryProgramId: PublicKey
   ) {
     this.connection = connection;
-    this.agentKeypair = agentKeypair;
-    this.trustLayer = new TrustLayer(connection, agentKeypair, programId);
-    this.strategies = new Map();
+    this.wallet = wallet;
+    this.vaultId = vaultId;
+    this.memory = new AgentMemory(
+      connection,
+      wallet,
+      agentMemoryProgramId
+    );
   }
 
   /**
-   * Initialize agent's trust layer account
+   * Initialize the vault's decision log in AgentMemory
    */
   async initialize() {
-    const tx = await this.trustLayer.initializeAgent();
-    console.log('✅ AutoVault Agent initialized:', tx);
-  }
-
-  /**
-   * Deploy capital to a DeFi strategy and log decision
-   */
-  async deployStrategy(
-    vaultAddress: string,
-    capital: number,
-    strategyType: VaultStrategy['strategyType'],
-    riskLevel: VaultStrategy['riskLevel']
-  ): Promise<VaultStrategy> {
-    console.log(`\n💰 Deploying ${strategyType} strategy: $${capital.toLocaleString()}`);
-
-    // Mock AutoVault strategy creation (replace with actual API)
-    const strategy = await this.mockAutoVaultStrategy(
-      vaultAddress,
-      capital,
-      strategyType,
-      riskLevel
-    );
-
-    this.strategies.set(strategy.strategyId, strategy);
-
-    // Log decision to AgentMemory
-    const decision = {
-      type: 'vault_strategy_deployment',
-      strategy_id: strategy.strategyId,
-      vault: vaultAddress,
-      strategy_type: strategyType,
-      capital,
-      target_apy: strategy.targetAPY,
-      risk_level: riskLevel,
-      market_conditions: strategy.reasoning.marketConditions,
-      expected_return: strategy.reasoning.expectedReturn,
-      risk_assessment: strategy.reasoning.riskAssessment,
-      timestamp: strategy.timestamp
-    };
-
-    const decisionHash = this.hashDecision(decision);
-    const tx = await this.trustLayer.logDecision(decisionHash, decision);
+    const sessionId = `autovault-${this.vaultId}-${Date.now()}`;
     
-    console.log('📝 Strategy logged on-chain:', {
-      strategy: strategyType,
-      target_apy: `${strategy.targetAPY}%`,
-      risk: riskLevel,
-      tx: tx.slice(0, 8) + '...'
+    await this.memory.logDecision({
+      sessionId,
+      decisionType: 'VAULT_INITIALIZATION',
+      context: JSON.stringify({
+        vaultId: this.vaultId,
+        strategy: 'dynamic_rebalancing',
+        riskTolerance: 'moderate',
+        initialCapital: 100000 // USDC
+      }),
+      reasoning: 'Vault initialized with moderate risk tolerance and dynamic rebalancing strategy',
+      outcome: 'initialized',
+      confidence: 100,
+      timestamp: Math.floor(Date.now() / 1000)
     });
 
-    return strategy;
+    console.log(`✅ AutoVault ${this.vaultId} decision log initialized`);
+    return sessionId;
   }
 
   /**
-   * Close strategy and attest yield outcome
+   * Log a rebalancing decision with full context
    */
-  async closeStrategy(strategyId: string): Promise<YieldOutcome> {
-    const strategy = this.strategies.get(strategyId);
-    if (!strategy) {
-      throw new Error(`Strategy ${strategyId} not found`);
+  async logRebalance(
+    sessionId: string,
+    decision: RebalanceDecision,
+    portfolioBefore: PortfolioSnapshot,
+    portfolioAfter: PortfolioSnapshot
+  ) {
+    const context = {
+      portfolioBefore,
+      portfolioAfter,
+      marketConditions: await this.getMarketConditions(),
+      timestamp: new Date().toISOString()
+    };
+
+    const reasoning = `
+DECISION: ${decision.action} ${decision.amount} ${decision.asset}
+
+RATIONALE:
+${decision.reason}
+
+RISK ANALYSIS:
+- Decision Confidence: ${decision.confidence}%
+- Position Risk Score: ${decision.riskScore}%
+- Portfolio Sharpe Ratio: ${portfolioBefore.riskMetrics.sharpeRatio.toFixed(2)}
+- Max Drawdown: ${portfolioBefore.riskMetrics.maxDrawdown.toFixed(2)}%
+
+EXPECTED IMPACT:
+- Value Change: $${(portfolioAfter.totalValue - portfolioBefore.totalValue).toFixed(2)}
+- Risk Adjustment: ${(portfolioAfter.riskMetrics.volatility - portfolioBefore.riskMetrics.volatility).toFixed(2)}%
+
+COMPLIANCE:
+- Strategy: Dynamic Rebalancing within 60/40 equity/bond allocation
+- Risk Limits: Respected (current volatility: ${portfolioBefore.riskMetrics.volatility.toFixed(2)}%)
+- Regulatory: SEC Rule 206(4)-7 compliance (documented reasoning)
+    `.trim();
+
+    await this.memory.logDecision({
+      sessionId,
+      decisionType: 'REBALANCE',
+      context: JSON.stringify(context),
+      reasoning,
+      outcome: 'pending', // Will be updated after execution
+      confidence: decision.confidence,
+      timestamp: Math.floor(Date.now() / 1000)
+    });
+
+    console.log(`📊 Logged rebalance decision: ${decision.action} ${decision.asset}`);
+  }
+
+  /**
+   * Update decision outcome after trade execution
+   */
+  async updateOutcome(
+    sessionId: string,
+    decisionId: PublicKey,
+    executionResult: {
+      success: boolean;
+      executedPrice: number;
+      slippage: number;
+      profitLoss: number;
+      timestamp: number;
     }
+  ) {
+    const outcome = executionResult.success ? 'executed' : 'failed';
+    const reasoning = `
+EXECUTION RESULT:
+- Status: ${outcome.toUpperCase()}
+- Executed Price: $${executionResult.executedPrice.toFixed(2)}
+- Slippage: ${executionResult.slippage.toFixed(2)}%
+- Profit/Loss: $${executionResult.profitLoss.toFixed(2)}
+- Timestamp: ${new Date(executionResult.timestamp).toISOString()}
+    `.trim();
 
-    console.log(`\n📊 Closing strategy: ${strategyId}`);
-
-    // Mock yield outcome (replace with actual AutoVault data)
-    const outcome = await this.mockYieldOutcome(strategy);
-
-    // Create attestation
-    const attestation = {
-      strategy_id: strategyId,
-      strategy_type: strategy.strategyType,
-      target_apy: strategy.targetAPY,
-      actual_apy: outcome.actualAPY,
-      total_return: outcome.totalReturn,
-      net_profit: outcome.netProfit,
-      duration_hours: outcome.duration,
-      volatility: outcome.volatility,
-      gas_spent: outcome.gasSpent,
-      outperformed_benchmark: outcome.outperformedBenchmark,
-      performance_score: this.calculatePerformanceScore(strategy, outcome),
-      timestamp: outcome.timestamp
-    };
-
-    const decisionHash = this.hashDecision({
-      type: 'vault_strategy_deployment',
-      strategy_id: strategy.strategyId,
-      vault: strategy.vaultAddress,
-      strategy_type: strategy.strategyType,
-      capital: strategy.capital,
-      target_apy: strategy.targetAPY,
-      risk_level: strategy.riskLevel,
-      timestamp: strategy.timestamp
+    // Note: updateDecisionOutcome would be added to SDK
+    // For now, we log a new decision referencing the original
+    await this.memory.logDecision({
+      sessionId,
+      decisionType: 'EXECUTION_RESULT',
+      context: JSON.stringify({
+        originalDecision: decisionId.toString(),
+        executionResult
+      }),
+      reasoning,
+      outcome,
+      confidence: executionResult.success ? 100 : 0,
+      timestamp: Math.floor(Date.now() / 1000)
     });
 
-    const attestationHash = this.hashDecision(attestation);
-    const tx = await this.trustLayer.attestOutcome(
-      decisionHash,
-      attestationHash,
-      attestation
-    );
+    console.log(`✓ Updated decision outcome: ${outcome}`);
+  }
 
-    console.log('✅ Yield outcome attested:', {
-      apy: `${outcome.actualAPY.toFixed(2)}% (target: ${strategy.targetAPY}%)`,
-      profit: `$${outcome.netProfit.toFixed(2)}`,
-      score: attestation.performance_score.toFixed(1),
-      tx: tx.slice(0, 8) + '...'
+  /**
+   * Query historical decisions for performance attribution
+   */
+  async getPerformanceAttribution(sessionId: string, startTimestamp: number, endTimestamp: number) {
+    const decisions = await this.memory.queryDecisions(sessionId, {
+      startTime: startTimestamp,
+      endTime: endTimestamp
     });
 
-    this.strategies.delete(strategyId);
-    return outcome;
-  }
+    // Analyze decisions to attribute performance
+    const trades = decisions.filter(d => d.decisionType === 'REBALANCE');
+    const executions = decisions.filter(d => d.decisionType === 'EXECUTION_RESULT');
 
-  /**
-   * Get agent's DeFi strategy reputation
-   */
-  async getReputation(): Promise<{
-    totalStrategies: number;
-    successfulStrategies: number;
-    averageAPY: number;
-    totalProfit: number;
-    winRate: number;
-    riskAdjustedReturn: number;
-    strategyBreakdown: Record<string, {
-      count: number;
-      avgAPY: number;
-      successRate: number;
-    }>;
-  }> {
-    const account = await this.trustLayer.getAgentAccount();
-    
-    // Mock reputation calculation
-    // In production, would parse all decisions from merkle tree
-    
-    return {
-      totalStrategies: 0,
-      successfulStrategies: 0,
-      averageAPY: 0,
-      totalProfit: 0,
-      winRate: 0,
-      riskAdjustedReturn: 0,
-      strategyBreakdown: {}
-    };
-  }
+    let totalPnL = 0;
+    const attribution: Record<string, number> = {};
 
-  /**
-   * Calculate performance score (0-100)
-   */
-  private calculatePerformanceScore(
-    strategy: VaultStrategy,
-    outcome: YieldOutcome
-  ): number {
-    let score = 0;
+    for (const execution of executions) {
+      const context = JSON.parse(execution.context);
+      const pnl = context.executionResult.profitLoss;
+      totalPnL += pnl;
 
-    // APY achievement (40 points max)
-    const apyRatio = outcome.actualAPY / strategy.targetAPY;
-    score += Math.min(40, apyRatio * 40);
-
-    // Profit vs gas (20 points max)
-    const efficiency = outcome.netProfit / (outcome.totalReturn + 0.01);
-    score += efficiency * 20;
-
-    // Volatility penalty (20 points)
-    const volatilityPenalty = Math.min(20, outcome.volatility * 10);
-    score += 20 - volatilityPenalty;
-
-    // Benchmark performance (20 points)
-    if (outcome.outperformedBenchmark) {
-      score += 20;
-    }
-
-    return Math.max(0, Math.min(100, score));
-  }
-
-  /**
-   * Mock AutoVault strategy creation
-   */
-  private async mockAutoVaultStrategy(
-    vaultAddress: string,
-    capital: number,
-    strategyType: VaultStrategy['strategyType'],
-    riskLevel: VaultStrategy['riskLevel']
-  ): Promise<VaultStrategy> {
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    const baseAPY = {
-      lending: 8,
-      liquidity: 15,
-      yield_farming: 25,
-      arbitrage: 40
-    }[strategyType];
-
-    const riskMultiplier = {
-      low: 0.7,
-      medium: 1.0,
-      high: 1.5
-    }[riskLevel];
-
-    return {
-      strategyId: `strat_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-      vaultAddress,
-      strategyType,
-      targetAPY: baseAPY * riskMultiplier,
-      riskLevel,
-      capital,
-      timestamp: Date.now(),
-      reasoning: {
-        marketConditions: 'Bullish trend, low volatility, high TVL',
-        expectedReturn: `${(baseAPY * riskMultiplier).toFixed(1)}% APY over ${strategyType === 'lending' ? 30 : 7} days`,
-        riskAssessment: `${riskLevel.toUpperCase()} risk - ${
-          riskLevel === 'low' ? 'Stable protocols, audited contracts' :
-          riskLevel === 'medium' ? 'Established protocols, some impermanent loss risk' :
-          'New protocols, high IL risk, potential rug'
-        }`,
-        competitorAnalysis: 'Outperforming average market APY by 40%'
+      // Extract asset from original decision
+      const originalId = context.originalDecision;
+      const originalDecision = trades.find(t => t.id === originalId);
+      if (originalDecision) {
+        const asset = JSON.parse(originalDecision.context).portfolioBefore.positions[0]?.asset || 'unknown';
+        attribution[asset] = (attribution[asset] || 0) + pnl;
       }
-    };
-  }
-
-  /**
-   * Mock yield outcome
-   */
-  private async mockYieldOutcome(strategy: VaultStrategy): Promise<YieldOutcome> {
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    const durationHours = Math.random() * 168 + 24; // 1-7 days
-    const performanceVariance = (Math.random() - 0.5) * 0.4; // ±20%
-    const actualAPY = strategy.targetAPY * (1 + performanceVariance);
-    
-    const annualizedReturn = actualAPY / 100;
-    const periodReturn = (annualizedReturn * durationHours) / (365 * 24);
-    const totalReturn = strategy.capital * periodReturn;
-    const gasSpent = Math.random() * 50 + 10;
-    const netProfit = totalReturn - gasSpent;
+    }
 
     return {
-      strategyId: strategy.strategyId,
-      actualAPY,
-      totalReturn,
-      duration: durationHours,
-      peakAPY: actualAPY * (1 + Math.random() * 0.2),
-      minAPY: actualAPY * (1 - Math.random() * 0.2),
-      volatility: Math.random() * 0.3,
-      gasSpent,
-      netProfit,
-      outperformedBenchmark: actualAPY > strategy.targetAPY * 0.9,
-      timestamp: Date.now()
+      totalPnL,
+      attribution,
+      trades: trades.length,
+      successRate: executions.filter(e => e.outcome === 'executed').length / executions.length * 100
     };
   }
 
   /**
-   * Simple hash function
+   * Generate regulatory compliance report
    */
-  private hashDecision(decision: any): string {
-    return Buffer.from(JSON.stringify(decision)).toString('base64').slice(0, 32);
+  async generateComplianceReport(sessionId: string, startDate: Date, endDate: Date) {
+    const decisions = await this.memory.queryDecisions(sessionId, {
+      startTime: Math.floor(startDate.getTime() / 1000),
+      endTime: Math.floor(endDate.getTime() / 1000)
+    });
+
+    const report = {
+      vaultId: this.vaultId,
+      reportPeriod: {
+        start: startDate.toISOString(),
+        end: endDate.toISOString()
+      },
+      summary: {
+        totalDecisions: decisions.length,
+        rebalances: decisions.filter(d => d.decisionType === 'REBALANCE').length,
+        avgConfidence: decisions.reduce((sum, d) => sum + d.confidence, 0) / decisions.length,
+        complianceStatus: 'COMPLIANT'
+      },
+      decisions: decisions.map(d => ({
+        timestamp: new Date(d.timestamp * 1000).toISOString(),
+        type: d.decisionType,
+        reasoning: d.reasoning,
+        confidence: d.confidence,
+        outcome: d.outcome,
+        onChainProof: `https://solscan.io/tx/${d.id}` // Solana transaction proof
+      })),
+      attestation: 'All decisions logged on-chain via AgentMemory Protocol (Solana)',
+      auditTrail: `Immutable, cryptographically verifiable decision history`
+    };
+
+    console.log('📋 Compliance Report Generated:');
+    console.log(JSON.stringify(report, null, 2));
+    return report;
+  }
+
+  // Mock method (replace with actual market data source)
+  private async getMarketConditions() {
+    return {
+      volatilityIndex: 15.2,
+      marketTrend: 'bullish',
+      sentimentScore: 0.65
+    };
   }
 }
 
 /**
- * Example Usage: Autonomous DeFi Yield Agent
+ * Example Usage Scenario
  */
-async function main() {
-  console.log('🚀 AutoVault × AgentMemory Integration\n');
-  console.log('Demonstrating autonomous DeFi strategy reputation\n');
-
-  // Setup
+async function exampleUsage() {
   const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-  const agentKeypair = Keypair.generate();
-  const programId = new PublicKey('YourProgramIdHere');
+  const wallet = Keypair.generate(); // Replace with actual wallet
+  const vaultId = 'vault-abc-123';
+  const agentMemoryProgram = new PublicKey('YOUR_AGENTMEMORY_PROGRAM_ID');
 
-  // Initialize agent
-  const agent = new AutoVaultAgent(connection, agentKeypair, programId);
-  await agent.initialize();
+  const vault = new AuditableAutoVault(connection, wallet, vaultId, agentMemoryProgram);
 
-  console.log('✅ AutoVault Agent initialized');
-  console.log('💰 Starting with $100,000 portfolio\n');
+  // 1. Initialize vault decision log
+  const sessionId = await vault.initialize();
 
-  // Scenario: Deploy multiple strategies with different risk levels
-  const strategies: VaultStrategy[] = [];
+  // 2. Make a rebalancing decision
+  const portfolioBefore: PortfolioSnapshot = {
+    totalValue: 100000,
+    positions: [
+      { asset: 'SOL', amount: 500, entryPrice: 100, timestamp: Date.now() },
+      { asset: 'USDC', amount: 50000, entryPrice: 1, timestamp: Date.now() }
+    ],
+    riskMetrics: {
+      sharpeRatio: 1.5,
+      maxDrawdown: 12,
+      volatility: 18
+    }
+  };
 
-  // Conservative strategy
-  console.log('═══════════════════════════════════════');
-  console.log('📊 STRATEGY 1: Conservative Lending');
-  console.log('═══════════════════════════════════════');
-  const conservativeStrategy = await agent.deployStrategy(
-    'ConservativeVault123',
-    40000,
-    'lending',
-    'low'
+  const decision: RebalanceDecision = {
+    action: 'BUY',
+    asset: 'SOL',
+    amount: 100,
+    reason: 'SOL price 15% below 50-day MA, strong support at $95, favorable risk/reward for mean reversion',
+    confidence: 75,
+    riskScore: 35
+  };
+
+  const portfolioAfter: PortfolioSnapshot = {
+    totalValue: 100000,
+    positions: [
+      { asset: 'SOL', amount: 600, entryPrice: 98, timestamp: Date.now() },
+      { asset: 'USDC', amount: 41200, entryPrice: 1, timestamp: Date.now() }
+    ],
+    riskMetrics: {
+      sharpeRatio: 1.55,
+      maxDrawdown: 13,
+      volatility: 19
+    }
+  };
+
+  await vault.logRebalance(sessionId, decision, portfolioBefore, portfolioAfter);
+
+  // 3. Execute trade and update outcome
+  const executionResult = {
+    success: true,
+    executedPrice: 98.5,
+    slippage: 0.5,
+    profitLoss: 1500, // $15/SOL gain on 100 SOL
+    timestamp: Date.now()
+  };
+
+  const decisionId = new PublicKey('decision-pubkey'); // From logRebalance return
+  await vault.updateOutcome(sessionId, decisionId, executionResult);
+
+  // 4. Performance attribution
+  const attribution = await vault.getPerformanceAttribution(
+    sessionId,
+    Math.floor(Date.now() / 1000) - 86400 * 30, // Last 30 days
+    Math.floor(Date.now() / 1000)
   );
-  strategies.push(conservativeStrategy);
+  console.log('Performance Attribution:', attribution);
 
-  // Moderate strategy
-  console.log('\n═══════════════════════════════════════');
-  console.log('📊 STRATEGY 2: Moderate Liquidity');
-  console.log('═══════════════════════════════════════');
-  const moderateStrategy = await agent.deployStrategy(
-    'ModerateVault456',
-    40000,
-    'liquidity',
-    'medium'
+  // 5. Generate compliance report
+  await vault.generateComplianceReport(
+    sessionId,
+    new Date(Date.now() - 86400 * 30 * 1000), // Last 30 days
+    new Date()
   );
-  strategies.push(moderateStrategy);
-
-  // Aggressive strategy
-  console.log('\n═══════════════════════════════════════');
-  console.log('📊 STRATEGY 3: Aggressive Yield Farming');
-  console.log('═══════════════════════════════════════');
-  const aggressiveStrategy = await agent.deployStrategy(
-    'AggressiveVault789',
-    20000,
-    'yield_farming',
-    'high'
-  );
-  strategies.push(aggressiveStrategy);
-
-  // Simulate time passing
-  console.log('\n⏳ Strategies running... (simulated)\n');
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  // Close strategies and attest outcomes
-  console.log('═══════════════════════════════════════');
-  console.log('📈 CLOSING STRATEGIES & ATTESTING OUTCOMES');
-  console.log('═══════════════════════════════════════');
-
-  const outcomes: YieldOutcome[] = [];
-  for (const strategy of strategies) {
-    const outcome = await agent.closeStrategy(strategy.strategyId);
-    outcomes.push(outcome);
-  }
-
-  // Summary
-  console.log('\n═══════════════════════════════════════');
-  console.log('💎 PERFORMANCE SUMMARY');
-  console.log('═══════════════════════════════════════');
-  
-  const totalProfit = outcomes.reduce((sum, o) => sum + o.netProfit, 0);
-  const avgAPY = outcomes.reduce((sum, o) => sum + o.actualAPY, 0) / outcomes.length;
-  const successCount = outcomes.filter(o => o.outperformedBenchmark).length;
-
-  console.log(`\n📊 Portfolio Performance:`);
-  console.log(`   Total Strategies: ${outcomes.length}`);
-  console.log(`   Successful: ${successCount}/${outcomes.length} (${(successCount/outcomes.length*100).toFixed(0)}%)`);
-  console.log(`   Average APY: ${avgAPY.toFixed(2)}%`);
-  console.log(`   Total Profit: $${totalProfit.toFixed(2)}`);
-  console.log(`   ROI: ${(totalProfit/100000*100).toFixed(2)}%`);
-
-  console.log(`\n📈 Strategy Breakdown:`);
-  outcomes.forEach((outcome, i) => {
-    const strategy = strategies[i];
-    console.log(`   ${i+1}. ${strategy.strategyType.toUpperCase()} (${strategy.riskLevel})`);
-    console.log(`      Target APY: ${strategy.targetAPY.toFixed(1)}%`);
-    console.log(`      Actual APY: ${outcome.actualAPY.toFixed(2)}%`);
-    console.log(`      Profit: $${outcome.netProfit.toFixed(2)}`);
-    console.log(`      Status: ${outcome.outperformedBenchmark ? '✅ Success' : '⚠️ Below target'}`);
-  });
-
-  console.log('\n🏆 Use Cases:');
-  console.log('- Autonomous DeFi agents build verifiable yield performance');
-  console.log('- Users can trust agents based on historical strategy success');
-  console.log('- AutoVault strategies gain credibility through on-chain attestation');
-  console.log('- Agents can be ranked by risk-adjusted returns');
-  console.log('- Portfolio managers prove consistent alpha generation');
 }
 
-// Run example
-main().catch(console.error);
+/**
+ * Key Benefits for AutoVault:
+ * 
+ * 1. AUDITABILITY: Every trade decision logged on-chain with reasoning
+ * 2. COMPLIANCE: SEC/regulatory requirements for algorithmic trading
+ * 3. PERFORMANCE ATTRIBUTION: Track which decisions generated alpha
+ * 4. TRUST: Investors can verify decision-making process
+ * 5. DEBUGGING: Understand why strategies underperformed
+ * 6. REPUTATION: Build verifiable track record for vault managers
+ * 
+ * Integration Points:
+ * - AutoVault smart contracts call AgentMemory on each rebalance
+ * - SDK wraps AutoVault API with automatic decision logging
+ * - UI displays decision history from AgentMemory Protocol
+ * - Analytics engine queries AgentMemory for performance analysis
+ */
+
+export default AuditableAutoVault;
