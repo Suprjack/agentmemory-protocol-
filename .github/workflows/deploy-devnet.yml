@@ -25,6 +25,9 @@ jobs:
       - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Update Cargo to latest
+        run: rustup update stable && rustup default stable
+
       - name: Cache Cargo
         uses: actions/cache@v4
         with:
@@ -53,7 +56,7 @@ jobs:
       - name: Install Anchor CLI
         run: |
           if ! command -v anchor &> /dev/null || [[ "$(anchor --version)" != *"${{ env.ANCHOR_VERSION }}"* ]]; then
-            cargo install --git https://github.com/coral-xyz/anchor --tag v${{ env.ANCHOR_VERSION }} anchor-cli --locked --force
+            cargo install --git https://github.com/coral-xyz/anchor --tag v${{ env.ANCHOR_VERSION }} anchor-cli --force
           fi
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
