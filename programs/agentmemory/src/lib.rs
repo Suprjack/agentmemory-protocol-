@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::keccak;
 
-declare_id!("AMem1111111111111111111111111111111111111111");
+declare_id!("9dn82CtCJLpyCgFSaA1DMYL4GyGk16vhUFuRyDELNrnQ");
 
 pub mod royalty;
 use royalty::*;
