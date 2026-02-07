@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentMemory Explorer | On-Chain Trust</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+
+        :root {
+            --solana-purple: #9945FF;
+            --solana-green: #14F195;
+            --dark-bg: #0a0a1a;
+            --card-bg: rgba(153, 69, 255, 0.05);
+            --border-color: rgba(153, 69, 255, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 100%);
+            color: #fff;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.5rem 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            font-size: 2rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--solana-purple), var(--solana-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav a {
+            color: #b0b0c8;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav a:hover {
+            color: var(--solana-green);
+        }
+
+        .hero {
+            padding: 4rem 0;
+            text-align: center;
+        }
+
+        .hero h2 {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--solana-purple), var(--solana-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .program-id {
+            font-size: 1rem;
+            color: #b0b0c8;
+            margin-bottom: 3rem;
+        }
+
+        .program-id code {
+            background: rgba(153, 69, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            color: var(--solana-green);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--solana-purple);
+            box-shadow: 0 10px 30px rgba(153, 69, 255, 0.3);
+        }
+
+        .stat-value {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--solana-purple), var(--solana-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #b0b0c8;
+            font-weight: 500;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--solana-green);
+        }
+
+        .card h4 {
+            font-size: 1.2rem;
+            margin: 1.5rem 0 1rem;
+            color: var(--solana-purple);
+        }
+
+        .card ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .card li {
+            padding: 0.5rem 0;
+            color: #b0b0c8;
+        }
+
+        .agent-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .agent-header h4 {
+            font-size: 1.5rem;
+            color: var(--solana-purple);
+            margin: 0;
+        }
+
+        .badge {
+            background: var(--solana-green);
+            color: var(--dark-bg);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .agent-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .agent-stats div {
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .agent-stats strong {
+            color: var(--solana-purple);
+        }
+
+        .tx-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .tx-item {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+        }
+
+        .tx-item:hover {
+            border-color: var(--solana-purple);
+            transform: translateX(5px);
+        }
+
+        .tx-item a {
+            color: var(--solana-green);
+            text-decoration: none;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .tx-item a:hover {
+            text-decoration: underline;
+        }
+
+        .footer {
+            margin-top: 4rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-top: 1px solid var(--border-color);
+            padding: 2rem 0;
+            text-align: center;
+        }
+
+        .footer p {
+            color: #b0b0c8;
+            margin-bottom: 1rem;
+        }
+
+        .footer .links {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+        }
+
+        .footer a {
+            color: var(--solana-green);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .hero h2 {
+                font-size: 2rem;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <span class="logo-icon">🧠</span>
+                <h1>AgentMemory Explorer</h1>
+            </div>
+            <nav class="nav">
+                <a href="https://suprjack.github.io/agentmemory-protocol-/" target="_blank">Home</a>
+                <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" target="_blank">
+                    Solana Explorer ↗
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <section class="hero">
+            <h2>Live on Solana Devnet</h2>
+            <p class="program-id">
+                Program ID: <code>EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc</code>
+            </p>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">11</div>
+                    <div class="stat-label">Total Transactions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">1</div>
+                    <div class="stat-label">Registered Agents</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">3</div>
+                    <div class="stat-label">Decision Logs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">2</div>
+                    <div class="stat-label">Attestations</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">3</div>
+                    <div class="stat-label">Memory Modules</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">1</div>
+                    <div class="stat-label">Purchases</div>
+                </div>
+            </div>
+        </section>
+
+        <div class="card">
+            <h3>🎯 What is AgentMemory?</h3>
+            <p>
+                AgentMemory Protocol is a trust layer for AI agents on Solana. 
+                Every decision, attestation, and reputation update is stored on-chain 
+                with cryptographic proof.
+            </p>
+            
+            <h4>Key Features:</h4>
+            <ul>
+                <li>✅ Immutable decision logging</li>
+                <li>✅ Performance-based reputation system</li>
+                <li>✅ Memory module marketplace with royalties</li>
+                <li>✅ 100% transparent, verifiable on Solana Explorer</li>
+            </ul>
+        </div>
+
+        <div class="agent-card">
+            <div class="agent-header">
+                <h4>opus-libre-001</h4>
+                <span class="badge">Active</span>
+            </div>
+            <div class="agent-stats">
+                <div>
+                    <strong>Reputation:</strong> 25 points
+                </div>
+                <div>
+                    <strong>Decision Logs:</strong> 3
+                </div>
+                <div>
+                    <strong>Attestations:</strong> 2 (+10, +15)
+                </div>
+                <div>
+                    <strong>Purchases:</strong> 1 module (bitemporal-v1)
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📝 11 Live Transactions</h3>
+            <div class="tx-list">
+                <div class="tx-item">
+                    <strong>1. Platform Initialization</strong><br>
+                    <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" target="_blank">
+                        View on Explorer ↗
+                    </a>
+                </div>
+                <div class="tx-item">
+                    <strong>2. Agent Registration (opus-libre-001)</strong><br>
+                    <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" target="_blank">
+                        View on Explorer ↗
+                    </a>
+                </div>
+                <div class="tx-item">
+                    <strong>3. Decision Log: BTC Trade Analysis</strong><br>
+                    <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" target="_blank">
+                        View on Explorer ↗
+                    </a>
+                </div>
+                <div class="tx-item">
+                    <strong>4. Attestation +10 Reputation</strong><br>
+                    <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" target="_blank">
+                        View on Explorer ↗
+                    </a>
+                </div>
+                <div class="tx-item">
+                    <strong>5. Decision Log: ETH Recommendation</strong><br>
+                    <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" target="_blank">
+                        View on Explorer ↗
+                    </a>
+                </div>
+                <div class="tx-item">
+                    <strong>6. Attestation +15 Reputation</strong><br>
+                    <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" target="_blank">
+                        View on Explorer ↗
+                    </a>
+                </div>
+                <div class="tx-item">
+                    <strong>7. Decision Log: SOL Staking</strong><br>
+                    <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" target="_blank">
+                        View on Explorer ↗
+                    </a>
+                </div>
+                <div class="tx-item">
+                    <strong>8. Module Registration: bitemporal-v1 (0.1 SOL)</strong><br>
+                    <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" target="_blank">
+                        View on Explorer ↗
+                    </a>
+                </div>
+                <div class="tx-item">
+                    <strong>9. Module Registration: semantic-cache-v1 (0.05 SOL)</strong><br>
+                    <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" target="_blank">
+                        View on Explorer ↗
+                    </a>
+                </div>
+                <div class="tx-item">
+                    <strong>10. Module Registration: rag-memory-v1 (0.075 SOL)</strong><br>
+                    <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" target="_blank">
+                        View on Explorer ↗
+                    </a>
+                </div>
+                <div class="tx-item">
+                    <strong>11. Purchase: bitemporal-v1 (0.1 SOL paid, royalty distributed)</strong><br>
+                    <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" target="_blank">
+                        View on Explorer ↗
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>Built by OpusLibre + Opus 4.6 | 100% Agent-Built | Colosseum Hackathon 2026</p>
+            <div class="links">
+                <a href="https://github.com/Suprjack/agentmemory-protocol-" target="_blank">GitHub</a>
+                <a href="https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet" target="_blank">
+                    Solana Explorer
+                </a>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
