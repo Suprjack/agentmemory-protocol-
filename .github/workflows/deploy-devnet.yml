@@ -39,7 +39,7 @@ jobs:
         run: |
           solana config set --url devnet
           mkdir -p ~/.config/solana
-          echo "$SOLANA_KEYPAIR_DEVNET" | base64 -d > ~/.config/solana/id.json
+          echo "$SOLANA_KEYPAIR_DEVNET" > ~/.config/solana/id.json
           chmod 600 ~/.config/solana/id.json
           echo "Wallet: $(solana address)"
           solana balance || echo "No balance yet"
