@@ -3,6 +3,9 @@ use anchor_lang::solana_program::keccak;
 
 declare_id!("AMem1111111111111111111111111111111111111111");
 
+pub mod royalty;
+use royalty::*;
+
 #[program]
 pub mod agentmemory {
     use super::*;
@@ -113,6 +116,53 @@ pub mod agentmemory {
         msg!("Outcome attested for agent: {}, new reputation: {}", 
              agent.agent_id, agent.reputation);
         Ok(())
+    }
+
+    // ============================================================================
+    // Royalty System (Marketplace Revenue)
+    // ============================================================================
+
+    /// Initialize platform config (treasury + fees)
+    pub fn initialize_platform(
+        ctx: Context<royalty::InitializePlatform>,
+        treasury: Pubkey,
+        platform_fee_bps: u16,
+        referral_fee_bps: u16,
+    ) -> Result<()> {
+        royalty::initialize_platform(ctx, treasury, platform_fee_bps, referral_fee_bps)
+    }
+
+    /// Register a new memory module for sale
+    pub fn register_module(
+        ctx: Context<royalty::RegisterModule>,
+        module_id: String,
+        price_lamports: u64,
+        royalty_bps: u16,
+        ipfs_hash: String,
+    ) -> Result<()> {
+        royalty::register_module(ctx, module_id, price_lamports, royalty_bps, ipfs_hash)
+    }
+
+    /// Purchase a module (triggers royalty distribution)
+    pub fn purchase_module(
+        ctx: Context<royalty::PurchaseModule>,
+        referrer: Option<Pubkey>,
+    ) -> Result<()> {
+        royalty::purchase_module(ctx, referrer)
+    }
+
+    /// Update module pricing
+    pub fn update_module_pricing(
+        ctx: Context<royalty::UpdateModulePricing>,
+        new_price: u64,
+        new_royalty_bps: u16,
+    ) -> Result<()> {
+        royalty::update_module_pricing(ctx, new_price, new_royalty_bps)
+    }
+
+    /// Deactivate module from marketplace
+    pub fn deactivate_module(ctx: Context<royalty::DeactivateModule>) -> Result<()> {
+        royalty::deactivate_module(ctx)
     }
 }
 
