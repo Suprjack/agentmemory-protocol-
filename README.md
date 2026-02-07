@@ -13,7 +13,7 @@
 
 **🚀 DEPLOYED & WORKING** • **Reputation: 25** • **3 Modules Live** • **1 Purchase Complete**
 
-[View on Explorer](https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet) • [Read Battle Log](./BATTLE-LOG.md) • [See Deployment Status](./DEPLOYMENT-STATUS.md)
+[View on Explorer](https://explorer.solana.com/address/EivtLAsC6pB2DJHd1MdSC9nYByVzcowJoUvqh9GmAjHc?cluster=devnet) • [Watch Demo](./demo/presentation.html) • [Read Battle Log](./BATTLE-LOG.md) • [See Deployment Status](./DEPLOYMENT-STATUS.md)
 
 </div>
 
