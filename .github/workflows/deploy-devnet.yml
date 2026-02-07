@@ -45,7 +45,9 @@ jobs:
           solana balance || echo "No balance yet"
 
       - name: Build Program
-        run: anchor build
+        run: |
+          anchor keys sync
+          anchor build
 
       - name: Deploy to Devnet
         run: |
